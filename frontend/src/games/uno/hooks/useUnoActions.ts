@@ -9,7 +9,12 @@ export function useUnoActions(onAction: GameActionSender) {
 
   return {
     playCard: (cardId: string, chosenColor?: string) => {
-      sendGameAction({ type: "PLAY_CARD", card_id: cardId, chosen_color: chosenColor });
+      const payload: Record<string, unknown> = { type: "PLAY_CARD", card_id: cardId };
+      // Fix 13: only include chosen_color when it's a real string (wild cards)
+      if (typeof chosenColor === "string" && chosenColor.length > 0) {
+        payload.chosen_color = chosenColor;
+      }
+      sendGameAction(payload);
     },
     drawCard: () => {
       sendGameAction({ type: "DRAW_CARD" });

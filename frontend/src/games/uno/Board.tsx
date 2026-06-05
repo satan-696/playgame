@@ -190,13 +190,28 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
     }
   }, [dealing.startDealing, state?.status]);
 
-  // Bug 2 fix: auto-dismiss color picker whenever it's no longer our turn
-  // (covers error paths, race conditions, and RESTART_GAME)
+  // Fix 11: dismiss color picker when it's no longer our turn OR when a relevant action resolves it
   useEffect(() => {
     if (!state?.is_my_turn) {
       setPendingWildCard(null);
     }
   }, [state?.is_my_turn]);
+
+  useEffect(() => {
+    const type = state?.last_action?.type;
+    if (
+      type === "PLAY_CARD" ||
+      type === "WD4_ACCEPTED" ||
+      type === "WD4_CHALLENGE_SUCCESS" ||
+      type === "WD4_CHALLENGE_FAILED" ||
+      type === "SWAP_HAND" ||
+      type === "TIMEOUT_SWAP_SKIPPED" ||
+      type === "TIMEOUT" ||
+      type === "RESTART_GAME"
+    ) {
+      setPendingWildCard(null);
+    }
+  }, [state?.last_action]);
 
   useEffect(() => {
     if (state?.is_my_turn) {
@@ -244,11 +259,13 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
       setPendingWildCard(card);
       return;
     }
+    // Fix 13: only non-wild cards reach here, no chosen_color needed
     actions.playCard(card.id);
   }, [actions]);
 
-  const pickColor = (color: PlayableColor) => {
+  const pickColorAndPlay = (color: PlayableColor) => {
     if (pendingWildCard) {
+      // Fix 13: chosen_color is guaranteed a valid string before dispatching
       actions.playCard(pendingWildCard.id, color);
       setPendingWildCard(null);
     }
@@ -462,7 +479,7 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
             </motion.div>
           )}
         </AnimatePresence>
-        <ColorPicker open={Boolean(pendingWildCard)} onColorPick={pickColor} />
+        <ColorPicker open={Boolean(pendingWildCard)} onColorPick={pickColorAndPlay} />
         <Wd4ChallengePrompt
           open={
             Boolean(state.pending_wd4_challenge) &&

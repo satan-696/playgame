@@ -151,13 +151,41 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str):
                     "payload": {"player_id": player_id, "player_name": player_name}
                 })
 
-                await connection_manager.broadcast_to_room(room_code, {
-                    "type": "ROOM_UPDATE",
-                    "payload": _make_room_payload(
-                        room_code, room.players, host_id,
-                        room.game_state, room.game_id, room.status
-                    )
-                })
+                # Send personalized view to each player so playable_card_ids is correct
+                if room.game_state and room.game_id:
+                    try:
+                        from app.games.registry import get_engine
+                        engine_cls = get_engine(room.game_id)
+                        engine = engine_cls()
+                        for p in room.players:
+                            player_ws = connection_manager.active_connections.get(p.id)
+                            if player_ws:
+                                player_view = engine.get_player_view(room.game_state, p.id)
+                                await player_ws.send_json({
+                                    "type": "ROOM_UPDATE",
+                                    "payload": _make_room_payload(
+                                        room_code, room.players, host_id,
+                                        player_view, room.game_id, room.status
+                                    )
+                                })
+                    except Exception:
+                        # Fallback: broadcast raw state (pre-game lobby)
+                        await connection_manager.broadcast_to_room(room_code, {
+                            "type": "ROOM_UPDATE",
+                            "payload": _make_room_payload(
+                                room_code, room.players, host_id,
+                                room.game_state, room.game_id, room.status
+                            )
+                        })
+                else:
+                    # No game started yet — broadcast lobby state normally
+                    await connection_manager.broadcast_to_room(room_code, {
+                        "type": "ROOM_UPDATE",
+                        "payload": _make_room_payload(
+                            room_code, room.players, host_id,
+                            room.game_state, room.game_id, room.status
+                        )
+                    })
 
             elif msg_type == "LEAVE_ROOM":
                 if room_code:
