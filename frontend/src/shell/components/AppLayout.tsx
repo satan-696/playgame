@@ -11,6 +11,7 @@ import { usePlayer } from "../context/PlayerContext";
 import { useRoom } from "../hooks/useRoom";
 import { pageVariants } from "../utils/motion";
 import { GAME_METAS } from "../../games/registry";
+import { API_URL } from "../constants";
 
 interface AppLayoutProps {
   roomCode?: string;
@@ -103,7 +104,7 @@ const HomeCards: React.FC = () => {
   const [showJoin, setShowJoin] = useState(false);
 
   const handleCreate = async () => {
-    const res = await fetch("http://localhost:8000/rooms", {
+    const res = await fetch(`${API_URL}/rooms`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ player_id: playerId, player_name: playerName }),
