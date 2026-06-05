@@ -52,6 +52,9 @@ export interface UnoGameState {
   pending_draw: number;
   drawn_this_turn: boolean;
   rules: UnoRules;
+  pending_wd4_challenge: { played_by: string; eligible_challenger: string } | null;
+  awaiting_swap: string | null;
+  swap_targets: string[];
 }
 
 export interface LastAction {

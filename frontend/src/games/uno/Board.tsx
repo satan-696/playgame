@@ -11,8 +11,10 @@ import { DrawPile } from "./components/DrawPile";
 import { GameOver } from "./components/GameOver";
 import { Hand } from "./components/Hand";
 import { OpponentHand } from "./components/OpponentHand";
+import { SwapPicker } from "./components/SwapPicker";
 import { TurnTimer } from "./components/TurnTimer";
 import { UnoButton } from "./components/UnoButton";
+import { Wd4ChallengePrompt } from "./components/Wd4ChallengePrompt";
 import { CARD_COLOR_GLOW, CARD_COLORS, UI_COLORS } from "./constants";
 import { useDealing } from "./hooks/useDealing";
 import { useUnoActions } from "./hooks/useUnoActions";
@@ -155,6 +157,17 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
     pending_draw: asNumber(rawState.pending_draw, 0),
     drawn_this_turn: asBoolean(rawState.drawn_this_turn),
     rules: isRecord(rawState.rules) ? (rawState.rules as unknown as import("./types").UnoRules) : { seven_zero: false, jump_in: false, must_play_drawn: false },
+    pending_wd4_challenge: (() => {
+      const ch = rawState.pending_wd4_challenge;
+      if (isRecord(ch) && typeof ch.played_by === "string" && typeof ch.eligible_challenger === "string") {
+        return { played_by: ch.played_by, eligible_challenger: ch.eligible_challenger };
+      }
+      return null;
+    })(),
+    awaiting_swap: typeof rawState.awaiting_swap === "string" ? rawState.awaiting_swap : null,
+    swap_targets: Array.isArray(rawState.swap_targets)
+      ? rawState.swap_targets.map((id) => asString(id)).filter(Boolean)
+      : [],
   };
 }
 
@@ -176,6 +189,14 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
       dealing.startDealing(() => setNormalRenderReady(true));
     }
   }, [dealing.startDealing, state?.status]);
+
+  // Bug 2 fix: auto-dismiss color picker whenever it's no longer our turn
+  // (covers error paths, race conditions, and RESTART_GAME)
+  useEffect(() => {
+    if (!state?.is_my_turn) {
+      setPendingWildCard(null);
+    }
+  }, [state?.is_my_turn]);
 
   useEffect(() => {
     if (state?.is_my_turn) {
@@ -244,7 +265,13 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   const iWon = state.winner_id === myPlayerId;
   const showHand = normalRenderReady || dealing.isDone;
   const isDealLocked = state.status === "playing" && !dealing.isDone;
-  const canAct = state.is_my_turn && !isDealLocked;
+  // Bug 10 fix: card interactivity must be blocked during WD4 challenge and when THIS player is awaiting a swap
+  // (not when a *different* player is awaiting a swap — that would black out innocent players' cards)
+  const canAct =
+    state.is_my_turn &&
+    !isDealLocked &&
+    !state.pending_wd4_challenge &&
+    state.awaiting_swap !== myPlayerId;
   const turnLabel = state.is_my_turn ? "Your turn" : `${state.current_player_name}'s turn`;
 
   return (
@@ -436,6 +463,29 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           )}
         </AnimatePresence>
         <ColorPicker open={Boolean(pendingWildCard)} onColorPick={pickColor} />
+        <Wd4ChallengePrompt
+          open={
+            Boolean(state.pending_wd4_challenge) &&
+            state.pending_wd4_challenge?.eligible_challenger === myPlayerId
+          }
+          playedByName={
+            state.players.find((p) => p.id === state.pending_wd4_challenge?.played_by)?.name ??
+            state.pending_wd4_challenge?.played_by ??
+            "Opponent"
+          }
+          drawCount={state.pending_draw}
+          onAccept={() => actions.challengeWd4(true)}
+          onChallenge={() => actions.challengeWd4(false)}
+        />
+        <SwapPicker
+          open={state.awaiting_swap === myPlayerId}
+          targets={state.swap_targets.map((id) => ({
+            id,
+            name: state.players.find((p) => p.id === id)?.name ?? id,
+            cardCount: state.opponent_card_counts[id] ?? 0,
+          }))}
+          onSwap={(targetId) => actions.swapHand(targetId)}
+        />
         <GameOver open={state.status === "finished"} iWon={iWon} winnerName={state.winner_name} isHost={isHost} onPlayAgain={actions.restartGame} onLeave={onLeave} />
         {/* Action card effect overlay — shows skip/reverse/draw animations */}
         <ActionEffect lastAction={dealing.isDone ? state.last_action : null} />

@@ -210,7 +210,7 @@ class UnoEngine(GameEngine):
         # Auto-penalty check for UNO before processing new action
         pending_uno = state.get("pending_uno_check")
         uno_started = state.get("uno_check_window_started")
-        if pending_uno and uno_started and not state.get("uno_declared", {}).get(pending_uno):
+        if pending_uno and uno_started and pending_uno != player_id and not state.get("uno_declared", {}).get(pending_uno):
             if (time.time() - uno_started) > 5.0:
                 _draw_cards(state, pending_uno, 2)
                 state["last_action"] = {
@@ -297,6 +297,7 @@ class UnoEngine(GameEngine):
         if state.get("drawn_this_turn"):
             state["drawn_this_turn"] = False
             state["drawn_card_id"] = None
+            state["pending_draw"] = 0
             state["last_action"] = {"type": "TIMEOUT", "player_id": player_id, "count": 0}
             _set_next_turn(state, _advance(idx, state["direction"], n))
             return state
@@ -448,7 +449,7 @@ class UnoEngine(GameEngine):
             raise ValueError("Must respond to Wild Draw 4 challenge first")
         pending = state["pending_draw"]
         drawn = state.get("drawn_this_turn", False)
-        if pending == 0 and drawn:
+        if drawn:
             raise ValueError("Already drew, play or pass")
         count = pending if pending > 0 else 1
         _draw_cards(state, player_id, count)
@@ -652,7 +653,7 @@ class UnoEngine(GameEngine):
         ids: list[str] = []
         deal_ends_at = state.get("initial_deal_ends_at")
         deal_finished = not isinstance(deal_ends_at, (int, float)) or time.time() >= deal_ends_at
-        if view["is_my_turn"] and deal_finished and not state.get("awaiting_swap") and not state.get("pending_wd4_challenge"):
+        if view["is_my_turn"] and deal_finished and state.get("awaiting_swap") != player_id and not state.get("pending_wd4_challenge"):
             top = state["discard"][-1]
             color = _current_color(state["discard"])
             pending = state["pending_draw"]

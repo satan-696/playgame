@@ -23,5 +23,12 @@ export function useUnoActions(onAction: GameActionSender) {
     restartGame: () => {
       sendGameAction({ type: "RESTART_GAME" });
     },
+    challengeWd4: (accept: boolean) => {
+      sendGameAction({ type: "CHALLENGE_WD4", accept });
+    },
+    swapHand: (targetPlayerId: string) => {
+      sendGameAction({ type: "SWAP_HAND", target_player_id: targetPlayerId });
+    },
   };
 }
+
