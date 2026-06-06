@@ -141,14 +141,16 @@ export function SwapPicker({ open, targets, onSwap }: SwapPickerProps) {
                     width: "100%",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(34,211,238,0.11)";
-                    e.currentTarget.style.borderColor = "rgba(34,211,238,0.5)";
-                    e.currentTarget.style.transform = "translateX(5px)";
+                    e.currentTarget.style.background = "rgba(0,229,255,0.08)";
+                    e.currentTarget.style.borderColor = "rgba(0,229,255,0.6)";
+                    e.currentTarget.style.boxShadow = "0 0 20px rgba(0,229,255,0.3)";
+                    e.currentTarget.style.transform = "scale(1.04)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "rgba(255,255,255,0.04)";
                     e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)";
-                    e.currentTarget.style.transform = "translateX(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "scale(1)";
                   }}
                 >
                   {/* Name */}

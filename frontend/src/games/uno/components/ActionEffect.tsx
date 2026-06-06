@@ -38,7 +38,7 @@ function SkipEffect() {
         color: "#ef4444", fontWeight: 900, fontSize: 24,
         letterSpacing: 4, textTransform: "uppercase",
         textShadow: "0 2px 16px rgba(239,68,68,0.9)",
-        fontFamily: "Arial Black, sans-serif",
+        fontFamily: "'Nunito', Arial Black, sans-serif",
       }}>SKIP!</span>
     </motion.div>
   );
@@ -66,7 +66,7 @@ function ReverseEffect() {
         color: "#22d3ee", fontWeight: 900, fontSize: 24,
         letterSpacing: 4, textTransform: "uppercase",
         textShadow: "0 2px 16px rgba(34,211,238,0.9)",
-        fontFamily: "Arial Black, sans-serif",
+        fontFamily: "'Nunito', Arial Black, sans-serif",
       }}>REVERSED!</span>
     </motion.div>
   );
@@ -129,7 +129,7 @@ function DrawCardsEffect({ count, color }: { count: number; color: string }) {
           boxShadow: `0 0 30px ${color}55`,
         }}
       >
-        <span style={{ color: "white", fontWeight: 900, fontSize: 32, fontFamily: "Arial Black, sans-serif" }}>
+        <span style={{ color: "white", fontWeight: 900, fontSize: 32, fontFamily: "'Nunito', Arial Black, sans-serif" }}>
           +{count}
         </span>
         <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 800, fontSize: 18, letterSpacing: 2 }}>
@@ -170,7 +170,7 @@ function WildEffect({ color }: { color?: PlayableColor }) {
           color: displayColor, fontWeight: 900, fontSize: 22,
           letterSpacing: 4, textTransform: "uppercase",
           textShadow: `0 2px 20px ${displayColor}`,
-          fontFamily: "Arial Black, sans-serif",
+          fontFamily: "'Nunito', Arial Black, sans-serif",
         }}>
           COLOR: {color.toUpperCase()}
         </span>

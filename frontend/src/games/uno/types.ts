@@ -55,6 +55,7 @@ export interface UnoGameState {
   pending_wd4_challenge: { played_by: string; eligible_challenger: string } | null;
   awaiting_swap: string | null;
   swap_targets: string[];
+  initial_deal_ends_at: number;
 }
 
 export interface LastAction {

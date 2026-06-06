@@ -53,18 +53,18 @@ export function ActionLog({ lastAction }: ActionLogProps) {
         {event && (
           <motion.div
             key={event.id}
-            initial={{ y: 28, opacity: 0 }}
+            initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -18, opacity: 0 }}
+            exit={{ opacity: 0 }}
             style={{
-              borderLeft: `4px solid ${event.color}`,
-              background: UI_COLORS.panelDark,
-              padding: "6px 14px",
+              background: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(8px)",
+              padding: "6px 18px",
               fontSize: 13,
-              color: UI_COLORS.white,
-              borderRadius: 6,
-              minWidth: 220,
-              textAlign: "left",
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.85)",
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.1)",
             }}
           >
             {event.text}

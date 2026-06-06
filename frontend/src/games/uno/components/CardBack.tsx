@@ -63,7 +63,7 @@ export function CardBack({ style, scale = 1 }: CardBackProps) {
             fontSize: 18,
             letterSpacing: 1.5,
             transform: "rotate(18deg)",
-            fontFamily: "Arial Black, sans-serif",
+            fontFamily: "'Nunito', Arial Black, sans-serif",
             textShadow: "0 1px 4px rgba(0,0,0,0.5)",
           }}
         >

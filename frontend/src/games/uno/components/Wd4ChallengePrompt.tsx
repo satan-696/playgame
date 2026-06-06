@@ -28,7 +28,7 @@ export function Wd4ChallengePrompt({
           style={{
             position: "absolute",
             inset: 0,
-            background: "rgba(0,0,0,0.80)",
+            background: "radial-gradient(ellipse at center, rgba(123,47,255,0.3) 0%, rgba(0,0,0,0.85) 100%)",
             backdropFilter: "blur(8px)",
             zIndex: 50,
             display: "flex",
@@ -76,6 +76,7 @@ export function Wd4ChallengePrompt({
                 justifyContent: "center",
                 border: "3px solid rgba(255,255,255,0.85)",
                 boxShadow: "0 0 36px rgba(139,92,246,0.55)",
+                animation: "wd4-spin 4s linear infinite",
               }}
             >
               <span
@@ -158,10 +159,10 @@ export function Wd4ChallengePrompt({
                   boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.filter = "brightness(1.25)";
-                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.animation = "shake 0.4s";
                 }}
                 onMouseLeave={(e) => {
+                  e.currentTarget.style.animation = "none";
                   e.currentTarget.style.filter = "brightness(1)";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
@@ -189,11 +190,11 @@ export function Wd4ChallengePrompt({
                   boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.filter = "brightness(1.25)";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0,229,255,0.6), 0 8px 24px rgba(0,229,255,0.3)";
                   e.currentTarget.style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.filter = "brightness(1)";
+                  e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,0.35)";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >

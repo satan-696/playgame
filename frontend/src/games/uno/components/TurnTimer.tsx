@@ -38,13 +38,6 @@ export function TurnTimer({ turnStartedAt, turnDuration, isMyTurn, paused = fals
         transition: "filter 0.4s",
       }}
     >
-      <style>{`
-        @keyframes timer-shake {
-          0%,100% { transform: translateX(0) rotate(0deg); }
-          25% { transform: translateX(-2px) rotate(-2deg); }
-          75% { transform: translateX(2px) rotate(2deg); }
-        }
-      `}</style>
       <svg width="58" height="58" viewBox="0 0 50 50">
         {/* Background track */}
         <circle cx="25" cy="25" r={r} stroke="rgba(255,255,255,0.12)" strokeWidth="5" fill="rgba(0,0,0,0.3)" />
@@ -70,7 +63,7 @@ export function TurnTimer({ turnStartedAt, turnDuration, isMyTurn, paused = fals
           fontSize="13"
           fontWeight="800"
           fill={paused ? "rgba(255,255,255,0.4)" : UI_COLORS.white}
-          fontFamily="Arial Black, sans-serif"
+          fontFamily="'Nunito', Arial Black, sans-serif"
         >
           {paused ? "–" : Math.ceil(remaining)}
         </text>

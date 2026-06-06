@@ -21,7 +21,7 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
   // For side hands, cards are stacked tightly vertically; for top, fan spread
   const maxSpread = isSide ? 0 : Math.min(visibleCount * 0.9, 10);
   const angleStep = visibleCount > 1 ? maxSpread / (visibleCount - 1) : 0;
-  const gapPx = isSide ? 18 : 22;
+  const gapPx = isSide ? 20 : 26;
 
   return (
     <div
@@ -115,7 +115,9 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
             borderRadius: 999,
             padding: "3px 10px",
             transition: "border 0.3s, background 0.3s",
-            boxShadow: opponent.isActive ? `0 0 12px rgba(34,211,238,0.5)` : "none",
+            boxShadow: opponent.isActive
+              ? `0 0 0 3px ${UI_COLORS.cyan}, 0 0 20px rgba(0,229,255,0.4)`
+              : "none",
           }}
         >
           {/* Card count dot */}

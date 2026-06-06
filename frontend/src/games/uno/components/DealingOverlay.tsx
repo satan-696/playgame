@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import type { DealingPhase } from "../hooks/useDealing";
@@ -57,18 +58,27 @@ export function DealingOverlay({ phase, dealtCounts, players, myPlayerId }: Deal
           ease: "power2.out",
           onComplete: () => {
             node.style.visibility = "hidden";
+            node.style.opacity = "0";
+            node.style.pointerEvents = "none";
+            // Reset transform so if node re-mounts it starts from center
+            gsap.set(node, { x: 0, y: 0, rotation: 0, scale: 1 });
           },
         });
       });
     });
-    return () => mm.revert();
+    return () => {
+      mm.revert();
+      gsap.killTweensOf(Array.from(cardRefs.current.values()));
+    };
   }, { scope: scopeRef, dependencies: [cards.length, phase] });
 
-  if (phase !== "dealing" && phase !== "revealing") return null;
-
   return (
-    <div
+    <motion.div
       ref={scopeRef}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
       style={{
         position: "absolute",
         inset: 0,
@@ -87,13 +97,13 @@ export function DealingOverlay({ phase, dealtCounts, players, myPlayerId }: Deal
           display: "flex",
           alignItems: "center",
           gap: 10,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(6px)",
+          background: "radial-gradient(ellipse at center, rgba(26,107,60,0.98) 0%, rgba(10,50,28,0.99) 100%)",
+          backdropFilter: "blur(4px)",
           color: "white",
           borderRadius: 999,
-          padding: "10px 22px",
+          padding: "14px 28px",
           border: "1px solid rgba(255,255,255,0.15)",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
         }}
       >
         {/* Spinner dots */}
@@ -107,21 +117,20 @@ export function DealingOverlay({ phase, dealtCounts, players, myPlayerId }: Deal
               width: 7,
               height: 7,
               borderRadius: "50%",
-              background: "#22d3ee",
+              background: "#2ECC71",
               animation: `deal-dot 1.2s ${i * 0.2}s infinite`,
             }}
           />
         ))}
         <span
           style={{
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.9)",
+            fontSize: 16,
+            fontWeight: 900,
+            letterSpacing: 1,
+            color: "rgba(255,255,255,0.95)",
           }}
         >
-          Dealing cards
+          Dealing Cards... 🃏
         </span>
       </div>
 
@@ -143,6 +152,6 @@ export function DealingOverlay({ phase, dealtCounts, players, myPlayerId }: Deal
           <CardBack />
         </div>
       ))}
-    </div>
+    </motion.div>
   );
 }

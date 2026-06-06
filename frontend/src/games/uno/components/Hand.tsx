@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { CARD_COLOR_GLOW } from "../constants";
 import type { UnoCard } from "../types";
 import { Card } from "./Card";
 
@@ -17,6 +16,7 @@ interface HandProps {
 export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = false, dealRevealCount = cards.length }: HandProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const prevCardIdsRef = useRef<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const fanLayout = useMemo(() => {
@@ -46,22 +46,32 @@ export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = fa
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       if (isDealing) return;
-      const nodes = cards
-        .map((card) => cardRefs.current.get(card.id))
+
+      // Only animate cards that are genuinely new
+      const newCardIds = cards
+        .map(c => c.id)
+        .filter(id => !prevCardIdsRef.current.has(id));
+
+      const nodes = newCardIds
+        .map(id => cardRefs.current.get(id))
         .filter((node): node is HTMLDivElement => Boolean(node));
-      gsap.from(nodes, {
-        y: -220,
-        opacity: 0,
-        rotation: () => Math.random() * 40 - 20,
-        duration: 0.4,
-        ease: "back.out(1.5)",
-        stagger: 0.055,
-      });
+
+      if (nodes.length === 0) return;
+
+      gsap.fromTo(
+        nodes,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.35, ease: "power2.out", stagger: 0.06 }
+      );
     });
+
+    // Update ref AFTER computing new cards
+    prevCardIdsRef.current = new Set(cards.map(c => c.id));
+
     return () => mm.revert();
   }, { scope: containerRef, dependencies: [cards.map((c) => c.id).join("|"), isDealing] });
 
-  // Playable card pulse
+  // Playable card pulse — bouncy upward jump
   useGSAP(() => {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
@@ -69,13 +79,23 @@ export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = fa
       const nodes = playableIds
         .map((id) => cardRefs.current.get(id))
         .filter((node): node is HTMLDivElement => Boolean(node));
-      gsap.to(nodes, {
-        boxShadow: `0 0 24px ${CARD_COLOR_GLOW.wild}, 0 0 0 2px rgba(255,255,255,0.6)`,
-        duration: 0.5,
-        yoyo: true,
-        repeat: 1,
-        ease: "sine.inOut",
-      });
+      if (nodes.length === 0) return;
+      gsap.fromTo(
+        nodes,
+        { opacity: 1 },
+        {
+          opacity: 0.85,
+          duration: 0.4,
+          yoyo: true,
+          repeat: 3,
+          ease: "sine.inOut",
+          stagger: 0.06,
+          onComplete: () => {
+            // Guarantee opacity is restored after pulse
+            gsap.set(nodes, { opacity: 1 });
+          },
+        }
+      );
     });
     return () => mm.revert();
   }, { scope: containerRef, dependencies: [isMyTurn, playableIds.join("|")] });
@@ -97,12 +117,16 @@ export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = fa
         const canPlay = playableIds.includes(card.id) && isMyTurn;
         const isHovered = hoveredId === card.id;
         // Compose transform at wrapper level to avoid overriding parent transforms
-        const liftY = isHovered && canPlay ? y - 26 : y;
-        const scale = isHovered && canPlay ? 1.1 : 1;
+        const liftY = isHovered && canPlay ? y - 36 : y;
+        const scale = isHovered && canPlay ? 1.15 : 1;
 
         return (
           <div
             key={card.id}
+            ref={(node) => {
+              if (node) cardRefs.current.set(card.id, node);
+              else cardRefs.current.delete(card.id);
+            }}
             onMouseEnter={() => setHoveredId(card.id)}
             onMouseLeave={() => setHoveredId(null)}
             style={{
@@ -115,20 +139,13 @@ export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = fa
               willChange: "transform",
             }}
           >
-            <div
-              ref={(node) => {
-                if (node) cardRefs.current.set(card.id, node);
-                else cardRefs.current.delete(card.id);
-              }}
-            >
-              <Card
-                card={card}
-                isPlayable={canPlay}
-                isMyTurn={isMyTurn}
-                isHovered={isHovered}
-                onClick={() => onCardClick(card)}
-              />
-            </div>
+            <Card
+              card={card}
+              isPlayable={canPlay}
+              isMyTurn={isMyTurn}
+              isHovered={isHovered}
+              onClick={() => onCardClick(card)}
+            />
           </div>
         );
       })}

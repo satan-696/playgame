@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { CARD_COLORS, UI_COLORS, UNO_COLORS } from "../constants";
+import { CARD_COLORS, UNO_COLORS } from "../constants";
 
 interface GameOverProps {
   open: boolean;
@@ -65,8 +65,8 @@ export function GameOver({ open, iWon, winnerName, isHost, onPlayAgain, onLeave 
             transition={{ type: "spring", stiffness: 280, damping: 24, delay: 0.1 }}
             style={{
               background: "rgba(10,10,28,0.97)",
-              borderRadius: 24,
-              border: `1.5px solid ${iWon ? "rgba(245,158,11,0.4)" : "rgba(255,255,255,0.12)"}`,
+              borderRadius: 28,
+              border: `2px solid ${iWon ? "rgba(255,214,0,0.5)" : "rgba(255,255,255,0.12)"}`,
               padding: "48px 64px",
               textAlign: "center",
               display: "flex",
@@ -74,7 +74,7 @@ export function GameOver({ open, iWon, winnerName, isHost, onPlayAgain, onLeave 
               gap: 24,
               alignItems: "center",
               boxShadow: iWon
-                ? "0 0 60px rgba(245,158,11,0.25), 0 24px 60px rgba(0,0,0,0.7)"
+                ? "0 0 80px rgba(255,214,0,0.25), 0 24px 60px rgba(0,0,0,0.7)"
                 : "0 24px 60px rgba(0,0,0,0.7)",
               minWidth: 340,
             }}
@@ -92,15 +92,15 @@ export function GameOver({ open, iWon, winnerName, isHost, onPlayAgain, onLeave 
             {/* Title */}
             <div>
               <div style={{
-                color: iWon ? UI_COLORS.gold : "rgba(255,255,255,0.45)",
+                color: iWon ? CARD_COLORS.yellow : "rgba(255,255,255,0.45)",
                 fontSize: iWon ? "2.8rem" : "1.6rem",
                 fontWeight: 900,
-                fontFamily: "Arial Black, sans-serif",
                 lineHeight: 1,
-                textShadow: iWon ? `0 0 40px ${UI_COLORS.gold}66` : "none",
+                textShadow: iWon ? `0 4px 0 rgba(0,0,0,0.3)` : "none",
                 marginBottom: 4,
+                animation: iWon ? "winner-bounce 0.6s ease-in-out infinite alternate" : "none",
               }}>
-                {iWon ? "YOU WIN!" : "GAME OVER"}
+                {iWon ? "🎉 YOU WON! 🎉" : "😢 Better luck next time!"}
               </div>
               {!iWon && winnerName && (
                 <div style={{

@@ -168,6 +168,8 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
     swap_targets: Array.isArray(rawState.swap_targets)
       ? rawState.swap_targets.map((id) => asString(id)).filter(Boolean)
       : [],
+    // Fix 3: pass through server deal timestamp so Board can compute serverDealDone
+    initial_deal_ends_at: asNumber(rawState.initial_deal_ends_at, 0),
   };
 }
 
@@ -179,16 +181,20 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   const [turnFlashKey, setTurnFlashKey] = useState(0);
   const [turnFlashVisible, setTurnFlashVisible] = useState(false);
   const colorGemRef = useRef<HTMLDivElement>(null);
-
+  
   const players = state?.players ?? [];
-
   const dealing = useDealing(players, myPlayerId);
 
   useEffect(() => {
     if (state?.status === "playing") {
-      dealing.startDealing(() => setNormalRenderReady(true));
+      const serverDealDone = !state.initial_deal_ends_at || Date.now() / 1000 >= state.initial_deal_ends_at;
+      if (serverDealDone) {
+        setNormalRenderReady(true);
+      } else {
+        dealing.startDealing(() => setNormalRenderReady(true));
+      }
     }
-  }, [dealing.startDealing, state?.status]);
+  }, [dealing.startDealing, state?.status, state?.initial_deal_ends_at]);
 
   // Fix 11: dismiss color picker when it's no longer our turn OR when a relevant action resolves it
   useEffect(() => {
@@ -211,7 +217,13 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
     ) {
       setPendingWildCard(null);
     }
-  }, [state?.last_action]);
+    // Fix 4: on restart, reset the dealing hook state and Board's guard so the
+    // deal animation replays for the new game
+    if (type === "RESTART_GAME") {
+      setNormalRenderReady(false);
+      dealing.reset();
+    }
+  }, [state?.last_action, dealing.reset]);
 
   useEffect(() => {
     if (state?.is_my_turn) {
@@ -280,8 +292,10 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   }
 
   const iWon = state.winner_id === myPlayerId;
-  const showHand = normalRenderReady || dealing.isDone;
-  const isDealLocked = state.status === "playing" && !dealing.isDone;
+  // Fix 3: treat deal as done once the server's timestamp has passed, even if the animation hook is stuck
+  const serverDealDone = !state.initial_deal_ends_at || Date.now() / 1000 >= state.initial_deal_ends_at;
+  const showHand = normalRenderReady || dealing.isDone || serverDealDone;
+  const isDealLocked = state.status === "playing" && !dealing.isDone && !serverDealDone;
   // Bug 10 fix: card interactivity must be blocked during WD4 challenge and when THIS player is awaiting a swap
   // (not when a *different* player is awaiting a swap — that would black out innocent players' cards)
   const canAct =
@@ -299,7 +313,11 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
         display: "grid",
         gridTemplateRows: "64px minmax(360px, 1fr) 42px 220px",
         gridTemplateAreas: "\"topbar\" \"table\" \"actionlog\" \"myhand\"",
-        background: `radial-gradient(ellipse at 50% 40%, ${UI_COLORS.tableStart} 0%, ${UI_COLORS.tableMiddle} 55%, ${UI_COLORS.tableEnd} 100%)`,
+        background: `
+          radial-gradient(ellipse at 30% 20%, rgba(46,204,113,0.15) 0%, transparent 50%),
+          radial-gradient(ellipse at 70% 80%, rgba(26,140,255,0.10) 0%, transparent 50%),
+          radial-gradient(ellipse at 50% 40%, ${UI_COLORS.tableStart} 0%, ${UI_COLORS.tableMiddle} 50%, ${UI_COLORS.tableEnd} 100%)
+        `,
         position: "relative",
         overflow: "hidden",
       }}
@@ -316,45 +334,63 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
               type="button"
               onClick={onLeave}
               style={{
-                border: `3px solid ${UI_COLORS.borderMuted}`,
-                borderRadius: 8,
-                background: `linear-gradient(180deg, ${UI_COLORS.buttonRed}, ${UI_COLORS.buttonRedDark})`,
+                border: `3px solid rgba(255,255,255,0.3)`,
+                borderRadius: 12,
+                background: `linear-gradient(180deg, ${UI_COLORS.buttonRed} 0%, ${UI_COLORS.buttonRedDark} 100%)`,
                 color: UI_COLORS.white,
-                padding: "8px 18px",
+                padding: "10px 22px",
                 fontWeight: 900,
-                letterSpacing: 1,
-                boxShadow: `0 5px 14px ${UI_COLORS.cardShadow}`,
+                fontSize: 14,
+                letterSpacing: 1.5,
+                boxShadow: `0 4px 0 rgba(0,0,0,0.3), 0 6px 16px rgba(255,59,48,0.4)`,
                 cursor: "pointer",
+                transition: "transform 0.12s, box-shadow 0.12s",
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = "translateY(4px)";
+                e.currentTarget.style.boxShadow = "0 0 0 rgba(0,0,0,0.3), 0 2px 8px rgba(255,59,48,0.3)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = `0 4px 0 rgba(0,0,0,0.3), 0 6px 16px rgba(255,59,48,0.4)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = `0 4px 0 rgba(0,0,0,0.3), 0 6px 16px rgba(255,59,48,0.4)`;
               }}
             >
               QUIT
             </button>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 800 }}>
-            <span style={{ display: "inline-block", animation: "spin-cw 3s linear infinite", animationDirection: state.direction === 1 ? "normal" : "reverse" }}>↻</span>
+            <span style={{ display: "inline-block", animation: `spin-cw ${state.turn_started_at && (state.turn_duration - (Date.now() / 1000 - state.turn_started_at)) < 8 ? "0.8s" : "3s"} linear infinite`, animationDirection: state.direction === 1 ? "normal" : "reverse", fontSize: 18 }}>↻</span>
             {state.direction === 1 ? "Clockwise" : "Counter-Clockwise"}
           </div>
         </div>
-        <div
-          style={{
-            justifySelf: "center",
-            minWidth: 280,
-            textAlign: "center",
-            borderRadius: 999,
-            padding: "8px 22px",
-            background: isDealLocked ? UI_COLORS.panelDark : state.is_my_turn ? "rgba(34,211,238,0.12)" : UI_COLORS.panelDark,
-            border: `1px solid ${state.is_my_turn && !isDealLocked ? UI_COLORS.cyan : UI_COLORS.tableLine}`,
-            animation: state.is_my_turn && !isDealLocked ? "my-turn-pulse 1.6s infinite" : "none",
-            transition: "border 0.3s, background 0.3s",
-          }}
-        >
-          <div style={{ fontSize: 10, fontWeight: 900, color: isDealLocked ? UI_COLORS.whiteMuted : state.is_my_turn ? UI_COLORS.cyan : UI_COLORS.whiteMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 1 }}>
-            {isDealLocked ? "Dealing Cards" : "Current Turn"}
-          </div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: UI_COLORS.white, letterSpacing: 0.5 }}>
-            {isDealLocked ? "Please wait…" : turnLabel}
-          </div>
-        </div>
+        <motion.div
+            key={state.current_player_id}
+            initial={{ y: -12, opacity: 0, scale: 0.94 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 380, damping: 22 }}
+            style={{
+              justifySelf: "center",
+              minWidth: 280,
+              textAlign: "center",
+              borderRadius: 999,
+              padding: "8px 22px",
+              background: isDealLocked ? UI_COLORS.panelDark : state.is_my_turn ? "rgba(0,229,255,0.12)" : UI_COLORS.panelDark,
+              border: `1px solid ${state.is_my_turn && !isDealLocked ? UI_COLORS.cyan : UI_COLORS.tableLine}`,
+              animation: state.is_my_turn && !isDealLocked ? "my-turn-pulse 1.6s infinite" : "none",
+              transition: "border 0.3s, background 0.3s",
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 900, color: isDealLocked ? UI_COLORS.whiteMuted : state.is_my_turn ? UI_COLORS.cyan : UI_COLORS.whiteMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 1 }}>
+              {isDealLocked ? "Dealing Cards" : "Current Turn"}
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 900, color: UI_COLORS.white, letterSpacing: 0.5 }}>
+              {isDealLocked ? "Please wait…" : turnLabel}
+            </div>
+          </motion.div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 14 }}>
           {state.pending_draw > 0 && canAct && (
             <button
@@ -411,13 +447,13 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           <div
             ref={colorGemRef}
             style={{
-              width: 28,
-              height: 28,
-              transform: "rotate(45deg)",
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
               backgroundColor: CARD_COLORS[state.active_color],
-              boxShadow: `0 0 16px ${CARD_COLOR_GLOW[state.active_color]}`,
+              boxShadow: `0 0 20px ${CARD_COLOR_GLOW[state.active_color]}, 0 4px 12px rgba(0,0,0,0.4)`,
               transition: "background-color 0.4s, box-shadow 0.4s",
-              border: `2px solid ${UI_COLORS.white}`,
+              border: `3px solid rgba(255,255,255,0.9)`,
             }}
           />
         </div>
@@ -428,12 +464,35 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           style={{
             position: "absolute",
             inset: "11% 20% 12%",
-            borderRadius: 18,
-            border: `2px solid ${UI_COLORS.tableFelt}`,
-            boxShadow: `inset 0 0 60px ${UI_COLORS.tableFelt}`,
+            borderRadius: 28,
+            border: `3px dashed rgba(255,255,255,0.15)`,
+            boxShadow: `inset 0 0 80px rgba(0,0,0,0.25), 0 0 0 6px rgba(255,255,255,0.04)`,
             pointerEvents: "none",
           }}
         />
+        {/* Decorative polka dots for playful board-game feel */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+          {[
+            { top: "12%", left: "8%", size: 10, opacity: 0.07 },
+            { top: "70%", left: "12%", size: 7, opacity: 0.06 },
+            { top: "25%", right: "10%", size: 12, opacity: 0.06 },
+            { top: "80%", right: "8%", size: 8, opacity: 0.07 },
+            { top: "45%", left: "5%", size: 6, opacity: 0.05 },
+            { top: "55%", right: "5%", size: 9, opacity: 0.05 },
+          ].map((dot, i) => (
+            <div key={i} style={{
+              position: "absolute",
+              top: dot.top,
+              left: (dot as any).left,
+              right: (dot as any).right,
+              width: dot.size,
+              height: dot.size,
+              borderRadius: "50%",
+              background: "white",
+              opacity: dot.opacity,
+            }} />
+          ))}
+        </div>
         <div style={{ position: "absolute", top: 16, left: 24, display: "flex", gap: 8, zIndex: 10 }}>
           {Object.entries(state.rules)
             .filter(([, active]) => active)
@@ -505,8 +564,12 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
         />
         <GameOver open={state.status === "finished"} iWon={iWon} winnerName={state.winner_name} isHost={isHost} onPlayAgain={actions.restartGame} onLeave={onLeave} />
         {/* Action card effect overlay — shows skip/reverse/draw animations */}
-        <ActionEffect lastAction={dealing.isDone ? state.last_action : null} />
-        <DealingOverlay phase={dealing.phase} dealtCounts={dealing.dealtCounts} players={players} myPlayerId={myPlayerId} />
+        <ActionEffect lastAction={!isDealLocked ? state.last_action : null} />
+        <AnimatePresence>
+          {(dealing.phase === "dealing" || dealing.phase === "revealing") && (
+            <DealingOverlay phase={dealing.phase} dealtCounts={dealing.dealtCounts} players={players} myPlayerId={myPlayerId} />
+          )}
+        </AnimatePresence>
       </div>
 
       <div style={{ gridArea: "actionlog" }}>
@@ -532,8 +595,8 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
             playableIds={state.playable_card_ids}
             isMyTurn={canAct}
             onCardClick={playCard}
-            isDealing={!dealing.isDone}
-            dealRevealCount={dealing.revealCount}
+            isDealing={isDealLocked}
+            dealRevealCount={isDealLocked ? dealing.revealCount : state.my_hand.length}
           />
         )}
       </div>

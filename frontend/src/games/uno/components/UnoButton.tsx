@@ -37,36 +37,35 @@ export function UnoButton({
         zIndex: 30,
       }}
     >
-      <style>{`
-        @keyframes uno-pulse {
-          0%,100% { transform: scale(1); box-shadow: 0 0 20px rgba(239,68,68,0.6); }
-          50%      { transform: scale(1.08); box-shadow: 0 0 40px rgba(239,68,68,0.9); }
-        }
-      `}</style>
       <AnimatePresence mode="popLayout">
         <motion.button
           key="uno"
           type="button"
-          initial={{ scale: 0.9, opacity: 0.5 }}
+          initial={{ scale: 0.92, opacity: 0.45 }}
           animate={{
-            scale: unoButtonActive ? 1 : 0.9,
-            opacity: unoButtonActive ? 1 : 0.5,
+            scale: unoButtonActive ? 1 : 0.92,
+            opacity: unoButtonActive ? 1 : 0.45,
           }}
           transition={{ type: "spring", stiffness: 420, damping: 22 }}
           onClick={handleUnoClick}
           style={{
-            background: "linear-gradient(135deg, #dc2626, #991b1b)",
+            background: "linear-gradient(160deg, #FF3B30 0%, #C0392B 100%)",
             color: "white",
-            border: "3px solid rgba(255,255,255,0.9)",
+            border: "4px solid rgba(255,255,255,0.25)",
             borderRadius: 999,
-            padding: "12px 40px",
-            fontSize: "1.5rem",
+            padding: "14px 36px",
+            fontSize: 22,
             fontWeight: 900,
-            fontFamily: "Arial Black, sans-serif",
-            letterSpacing: 4,
+            fontFamily: "'Nunito', Arial Black, sans-serif",
+            letterSpacing: 2,
             cursor: unoButtonActive ? "pointer" : "default",
-            animation: unoButtonActive ? "uno-pulse 0.75s infinite" : "none",
+            pointerEvents: unoButtonActive ? "auto" : "none",
+            animation: unoButtonActive ? "uno-btn-bounce 0.7s ease-in-out infinite" : "none",
             textShadow: "0 2px 8px rgba(0,0,0,0.4)",
+            boxShadow: unoButtonActive
+              ? "0 0 0 4px rgba(255,59,48,0.4), 0 8px 28px rgba(255,59,48,0.5)"
+              : "0 6px 20px rgba(0,0,0,0.4)",
+            transition: "opacity 0.2s, box-shadow 0.2s",
           }}
         >
           UNO!

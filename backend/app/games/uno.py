@@ -651,9 +651,8 @@ class UnoEngine(GameEngine):
         current = state["turn_order"][idx]
         view["is_my_turn"] = current == player_id
         ids: list[str] = []
-        deal_ends_at = state.get("initial_deal_ends_at")
-        deal_finished = not isinstance(deal_ends_at, (int, float)) or time.time() >= deal_ends_at
-        if view["is_my_turn"] and deal_finished and state.get("awaiting_swap") != player_id and not state.get("pending_wd4_challenge"):
+        # Removed deal_finished check — frontend handles deal lock via isDealLocked/canAct
+        if view["is_my_turn"] and state.get("awaiting_swap") != player_id and not state.get("pending_wd4_challenge"):
             top = state["discard"][-1]
             color = _current_color(state["discard"])
             pending = state["pending_draw"]

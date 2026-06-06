@@ -17,7 +17,10 @@ export function DiscardPile({ topCard }: DiscardPileProps) {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       if (cardRef.current) {
-        gsap.from(cardRef.current, { scale: 0.5, y: -100, rotation: -15, duration: 0.35, ease: "back.out(1.5)" });
+        gsap.fromTo(cardRef.current,
+          { rotateY: 90, scale: 0.8, opacity: 0 },
+          { rotateY: 0, scale: 1, opacity: 1, duration: 0.3, ease: "back.out(1.5)" }
+        );
       }
     });
     return () => mm.revert();

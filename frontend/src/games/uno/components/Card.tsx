@@ -1,5 +1,5 @@
 import type { CSSProperties, Ref } from "react";
-import { CARD_COLORS, CARD_HEIGHT, CARD_WIDTH, UI_COLORS } from "../constants";
+import { CARD_COLORS, CARD_COLOR_GLOW, CARD_HEIGHT, CARD_WIDTH, UI_COLORS } from "../constants";
 import type { UnoCard } from "../types";
 
 interface CardProps {
@@ -40,23 +40,17 @@ export function Card({
     : CARD_COLORS[card.color];
 
   const glowColor = isWild
-    ? "rgba(139,92,246,0.8)"
-    : card.color === "red"
-    ? "rgba(220,38,38,0.8)"
-    : card.color === "green"
-    ? "rgba(22,163,74,0.8)"
-    : card.color === "blue"
-    ? "rgba(37,99,235,0.8)"
-    : "rgba(202,138,4,0.8)";
+    ? CARD_COLOR_GLOW.wild
+    : CARD_COLOR_GLOW[card.color] ?? "rgba(255,255,255,0.5)";
 
   const displayValue = SPECIAL_ICONS[card.value] ?? card.value;
-  const pipColor = isWild ? UI_COLORS.white : "rgba(255,255,255,0.95)";
+  const pipColor = isWild ? UI_COLORS.white : "rgba(255,255,255,0.97)";
 
-  let boxShadow = `0 4px 14px rgba(0,0,0,0.5)`;
+  let boxShadow = `0 6px 18px rgba(0,0,0,0.5)`;
   if (isHovered && canPlay) {
-    boxShadow = `0 12px 32px rgba(0,0,0,0.6), 0 0 0 3px white, 0 0 20px ${glowColor}`;
+    boxShadow = `0 8px 24px rgba(0,0,0,0.55), 0 0 0 3px white, 0 0 28px ${glowColor}`;
   } else if (canPlay) {
-    boxShadow = `0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.5)`;
+    boxShadow = `0 4px 14px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.6)`;
   }
 
   return (
@@ -69,8 +63,8 @@ export function Card({
       style={{
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        borderRadius: 12,
-        border: `3px solid ${UI_COLORS.white}`,
+        borderRadius: 16,
+        border: `4px solid rgba(255,255,255,0.95)`,
         boxShadow,
         background,
         position: "relative",
@@ -78,7 +72,7 @@ export function Card({
         cursor: canPlay ? "pointer" : "default",
         userSelect: "none",
         transition: "box-shadow 0.18s ease, filter 0.18s ease",
-        filter: !isMyTurn || isPlayable ? "none" : "brightness(0.38) saturate(0.25)",
+        filter: !isMyTurn || isPlayable ? "none" : "brightness(0.30) saturate(0.15)",
         ...style,
       }}
     >
@@ -94,25 +88,31 @@ export function Card({
           lineHeight: 1,
         }}
       >
-        <span style={{ color: pipColor, fontSize: 15, fontWeight: 900, fontFamily: "Arial Black, sans-serif" }}>
+        <span style={{ color: pipColor, fontSize: 15, fontWeight: 900, fontFamily: "'Nunito', Arial Black, sans-serif" }}>
           {displayValue}
         </span>
       </div>
 
       {/* Center body */}
       {isWild ? (
-        /* Wild card: 4-color star */
+        /* Wild card: rainbow ring */
         <div
           style={{
             position: "absolute",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 72,
-            height: 72,
+            width: 78,
+            height: 78,
             borderRadius: "50%",
-            background: "rgba(0,0,0,0.35)",
-            border: "3px solid rgba(255,255,255,0.9)",
+            background: `conic-gradient(
+              ${CARD_COLORS.red} 0deg 90deg,
+              ${CARD_COLORS.blue} 90deg 180deg,
+              ${CARD_COLORS.yellow} 180deg 270deg,
+              ${CARD_COLORS.green} 270deg 360deg
+            )`,
+            border: "4px solid rgba(255,255,255,0.95)",
+            boxShadow: "0 0 20px rgba(123,47,255,0.6)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -124,14 +124,14 @@ export function Card({
               fontWeight: 900,
               color: "white",
               textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-              fontFamily: "Arial Black, sans-serif",
+              fontFamily: "'Nunito', Arial Black, sans-serif",
             }}
           >
             {displayValue}
           </span>
         </div>
       ) : isSpecial ? (
-        /* Skip / Reverse / Draw2: dark oval with symbol */
+        /* Skip / Reverse / Draw2: tilted oval with symbol */
         <div
           style={{
             position: "absolute",
@@ -155,14 +155,14 @@ export function Card({
               fontWeight: 900,
               color: "white",
               textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-              fontFamily: "Arial Black, sans-serif",
+              fontFamily: "'Nunito', Arial Black, sans-serif",
             }}
           >
             {displayValue}
           </span>
         </div>
       ) : (
-        /* Number card: rotated diamond + big number */
+        /* Number card: bigger diamond + bigger number */
         <>
           <div
             style={{
@@ -170,10 +170,11 @@ export function Card({
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%) rotate(45deg)",
-              width: 70,
-              height: 70,
-              background: "rgba(255,255,255,0.88)",
-              borderRadius: 6,
+              width: 80,
+              height: 80,
+              background: "rgba(255,255,255,0.92)",
+              borderRadius: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}
           />
           <span
@@ -182,11 +183,11 @@ export function Card({
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              fontSize: 40,
+              fontSize: 46,
               fontWeight: 900,
               color: CARD_COLORS[card.color],
               textShadow: "none",
-              fontFamily: "Arial Black, sans-serif",
+              fontFamily: "'Nunito', Arial Black, sans-serif",
               lineHeight: 1,
             }}
           >
@@ -208,7 +209,7 @@ export function Card({
           transform: "rotate(180deg)",
         }}
       >
-        <span style={{ color: pipColor, fontSize: 15, fontWeight: 900, fontFamily: "Arial Black, sans-serif" }}>
+        <span style={{ color: pipColor, fontSize: 15, fontWeight: 900, fontFamily: "'Nunito', Arial Black, sans-serif" }}>
           {displayValue}
         </span>
       </div>
@@ -219,11 +220,26 @@ export function Card({
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 60%)",
             pointerEvents: "none",
           }}
         />
       )}
+
+      {/* Diagonal texture overlay — gives cards a physical feel */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage: `repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 4px,
+          rgba(255,255,255,0.03) 4px,
+          rgba(255,255,255,0.03) 5px
+        )`,
+        borderRadius: 13,
+        pointerEvents: "none",
+      }} />
     </div>
   );
 }

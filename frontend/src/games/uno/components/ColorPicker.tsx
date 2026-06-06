@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { CARD_COLORS, UNO_COLORS } from "../constants";
+import { CARD_COLORS, CARD_COLOR_GLOW, UNO_COLORS } from "../constants";
 import type { PlayableColor } from "../types";
 
 interface ColorPickerProps {
@@ -26,7 +26,7 @@ export function ColorPicker({ open, onColorPick }: ColorPickerProps) {
             position: "absolute",
             inset: 0,
             background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(6px)",
+            backdropFilter: "blur(12px)",
             zIndex: 50,
             display: "flex",
             alignItems: "center",
@@ -41,25 +41,25 @@ export function ColorPicker({ open, onColorPick }: ColorPickerProps) {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 20,
+              gap: 24,
               alignItems: "center",
-              background: "rgba(15,15,35,0.95)",
-              borderRadius: 20,
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "linear-gradient(160deg, #1a1a2e 0%, #16213e 100%)",
+              borderRadius: 28,
+              border: "2px solid rgba(255,255,255,0.12)",
               padding: "32px 40px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
             }}
           >
             <div>
               <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 800, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>
                 Wild Card
               </div>
-              <div style={{ color: "white", fontSize: 20, fontWeight: 900, fontFamily: "Arial Black, sans-serif" }}>
-                Choose a Color
+              <div style={{ color: "white", fontSize: 18, fontWeight: 900, letterSpacing: 1 }}>
+                Choose a Color!
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+            <div style={{ display: "flex", gap: 16 }}>
               {UNO_COLORS.map((color, i) => {
                 const isHovered = hovered === color;
                 return (
@@ -74,31 +74,30 @@ export function ColorPicker({ open, onColorPick }: ColorPickerProps) {
                     onMouseEnter={() => setHovered(color)}
                     onMouseLeave={() => setHovered(null)}
                     style={{
-                      width: 100,
-                      height: 100,
-                      borderRadius: 16,
-                      backgroundColor: CARD_COLORS[color],
-                      border: isHovered ? "3px solid white" : "3px solid rgba(255,255,255,0.3)",
+                      width: 72,
+                      height: 72,
+                      borderRadius: "50%",
+                      background: CARD_COLORS[color],
+                      border: "4px solid rgba(255,255,255,0.9)",
                       cursor: "pointer",
-                      transform: isHovered ? "scale(1.1) translateY(-4px)" : "scale(1)",
-                      transition: "transform 0.18s cubic-bezier(0.22,1,0.36,1), border 0.15s, box-shadow 0.18s",
+                      transform: isHovered ? "scale(1.2)" : "scale(1)",
+                      transition: "transform 0.15s cubic-bezier(0.22,1,0.36,1), box-shadow 0.15s",
                       boxShadow: isHovered
-                        ? `0 8px 24px rgba(0,0,0,0.4), 0 0 0 3px white, 0 0 20px ${CARD_COLORS[color]}88`
-                        : "0 4px 12px rgba(0,0,0,0.3)",
+                        ? `0 8px 28px ${CARD_COLOR_GLOW[color]}, 0 0 0 4px white`
+                        : `0 6px 20px ${CARD_COLOR_GLOW[color]}, 0 0 0 0px white`,
                       display: "flex",
                       alignItems: "flex-end",
                       justifyContent: "center",
-                      paddingBottom: 10,
+                      paddingBottom: 8,
                     }}
                   >
                     <span style={{
-                      color: "rgba(255,255,255,0.9)",
-                      fontSize: 12,
+                      color: "rgba(255,255,255,0.95)",
+                      fontSize: 10,
                       fontWeight: 900,
                       textTransform: "uppercase",
-                      letterSpacing: 1.5,
-                      textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-                      fontFamily: "Arial Black, sans-serif",
+                      letterSpacing: 1,
+                      textShadow: "0 1px 4px rgba(0,0,0,0.7)",
                     }}>
                       {color}
                     </span>

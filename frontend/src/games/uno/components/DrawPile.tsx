@@ -27,7 +27,8 @@ export function DrawPile({ deckCount, isMyTurn, onDraw }: DrawPileProps) {
         opacity: isMyTurn ? 1 : 0.55,
         cursor: isMyTurn ? "pointer" : "not-allowed",
         transition: "transform 0.2s cubic-bezier(0.22,1,0.36,1), opacity 0.2s",
-        transform: hovered && isMyTurn ? "scale(1.07) translateY(-4px)" : "scale(1)",
+        transform: hovered && isMyTurn ? "scale(1.08) translateY(-4px)" : "scale(1)",
+        animation: !hovered ? "draw-pile-float 3s ease-in-out infinite" : "none",
       }}
     >
       {/* Stack of 3 cards offset */}
@@ -75,8 +76,8 @@ export function DrawPile({ deckCount, isMyTurn, onDraw }: DrawPileProps) {
             width: CARD_WIDTH + 8,
             height: CARD_HEIGHT + 8,
             borderRadius: 16,
-            border: "2px solid rgba(255,255,255,0.6)",
-            boxShadow: "0 0 20px rgba(255,255,255,0.25)",
+            border: "2px solid rgba(46,204,113,0.8)",
+            boxShadow: "0 0 24px rgba(46,204,113,0.5), 0 0 0 4px rgba(46,204,113,0.15)",
             pointerEvents: "none",
           }}
         />
