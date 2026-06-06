@@ -1,5 +1,5 @@
 import type { CSSProperties, Ref } from "react";
-import { CARD_COLORS, CARD_COLOR_GLOW, CARD_HEIGHT, CARD_WIDTH, UI_COLORS } from "../constants";
+import { CARD_COLORS, CARD_COLOR_GLOW, CARD_HEIGHT, CARD_WIDTH, UI_COLORS, VALUE_SYMBOLS } from "../constants";
 import type { UnoCard } from "../types";
 
 interface CardProps {
@@ -11,14 +11,12 @@ interface CardProps {
   style?: CSSProperties;
   className?: string;
   cardRef?: Ref<HTMLDivElement>;
+  isDarkSide?: boolean;  // Flip: renders dark-side wild differently
 }
 
+// Legacy SPECIAL_ICONS kept for types not covered by VALUE_SYMBOLS
 const SPECIAL_ICONS: Record<string, string> = {
-  skip: "🚫",
-  reverse: "🔄",
-  draw2: "+2",
-  wild: "★",
-  wild_draw4: "+4",
+  ...VALUE_SYMBOLS,
 };
 
 export function Card({
@@ -30,14 +28,17 @@ export function Card({
   style,
   className,
   cardRef,
+  isDarkSide = false,
 }: CardProps) {
   const canPlay = isPlayable && isMyTurn;
   const isWild = card.color === "wild";
   const isSpecial = card.value in SPECIAL_ICONS;
 
   const background = isWild
-    ? `conic-gradient(${CARD_COLORS.red} 0deg 90deg, ${CARD_COLORS.blue} 90deg 180deg, ${CARD_COLORS.yellow} 180deg 270deg, ${CARD_COLORS.green} 270deg 360deg)`
-    : CARD_COLORS[card.color];
+    ? isDarkSide
+      ? "radial-gradient(ellipse at center, #2d1b4e 0%, #0a0015 100%)"
+      : `conic-gradient(${CARD_COLORS.red} 0deg 90deg, ${CARD_COLORS.blue} 90deg 180deg, ${CARD_COLORS.yellow} 180deg 270deg, ${CARD_COLORS.green} 270deg 360deg)`
+    : CARD_COLORS[card.color] ?? CARD_COLORS.wild;
 
   const glowColor = isWild
     ? CARD_COLOR_GLOW.wild
@@ -72,7 +73,7 @@ export function Card({
         cursor: canPlay ? "pointer" : "default",
         userSelect: "none",
         transition: "box-shadow 0.18s ease, filter 0.18s ease",
-        filter: !isMyTurn || isPlayable ? "none" : "brightness(0.30) saturate(0.15)",
+        filter: !isMyTurn || isPlayable ? "none" : "brightness(0.60) saturate(0.60)",
         ...style,
       }}
     >
@@ -95,7 +96,7 @@ export function Card({
 
       {/* Center body */}
       {isWild ? (
-        /* Wild card: rainbow ring */
+        /* Wild card: rainbow ring (light) or dark nebula (dark side) */
         <div
           style={{
             position: "absolute",
@@ -105,14 +106,16 @@ export function Card({
             width: 78,
             height: 78,
             borderRadius: "50%",
-            background: `conic-gradient(
-              ${CARD_COLORS.red} 0deg 90deg,
-              ${CARD_COLORS.blue} 90deg 180deg,
-              ${CARD_COLORS.yellow} 180deg 270deg,
-              ${CARD_COLORS.green} 270deg 360deg
-            )`,
-            border: "4px solid rgba(255,255,255,0.95)",
-            boxShadow: "0 0 20px rgba(123,47,255,0.6)",
+            background: isDarkSide
+              ? "radial-gradient(ellipse at 40% 35%, #4a1e8a 0%, #1a0a2e 70%, #050010 100%)"
+              : `conic-gradient(
+                ${CARD_COLORS.red} 0deg 90deg,
+                ${CARD_COLORS.blue} 90deg 180deg,
+                ${CARD_COLORS.yellow} 180deg 270deg,
+                ${CARD_COLORS.green} 270deg 360deg
+              )`,
+            border: isDarkSide ? "4px solid rgba(123,47,255,0.8)" : "4px solid rgba(255,255,255,0.95)",
+            boxShadow: isDarkSide ? "0 0 20px rgba(123,47,255,0.7)" : "0 0 20px rgba(123,47,255,0.6)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -120,7 +123,7 @@ export function Card({
         >
           <span
             style={{
-              fontSize: card.value === "wild_draw4" ? 26 : 28,
+              fontSize: card.value === "wild_draw4" || card.value === "wild_draw2" ? 20 : 28,
               fontWeight: 900,
               color: "white",
               textShadow: "0 2px 8px rgba(0,0,0,0.7)",
@@ -131,7 +134,7 @@ export function Card({
           </span>
         </div>
       ) : isSpecial ? (
-        /* Skip / Reverse / Draw2: tilted oval with symbol */
+        /* Skip / Reverse / Draw2 and all new action cards: tilted oval with symbol */
         <div
           style={{
             position: "absolute",
@@ -151,7 +154,7 @@ export function Card({
           <span
             style={{
               transform: "rotate(25deg)",
-              fontSize: card.value === "draw2" ? 26 : 28,
+              fontSize: card.value === "draw2" || card.value === "draw1" ? 26 : 22,
               fontWeight: 900,
               color: "white",
               textShadow: "0 2px 8px rgba(0,0,0,0.5)",
@@ -185,7 +188,7 @@ export function Card({
               transform: "translate(-50%, -50%)",
               fontSize: 46,
               fontWeight: 900,
-              color: CARD_COLORS[card.color],
+              color: CARD_COLORS[card.color] ?? CARD_COLORS.wild,
               textShadow: "none",
               fontFamily: "'Nunito', Arial Black, sans-serif",
               lineHeight: 1,

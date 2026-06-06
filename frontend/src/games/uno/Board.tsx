@@ -9,6 +9,7 @@ import { DealingOverlay } from "./components/DealingOverlay";
 import { DiscardPile } from "./components/DiscardPile";
 import { DrawPile } from "./components/DrawPile";
 import { GameOver } from "./components/GameOver";
+import { GameVariantOverlays } from "./components/GameVariantOverlays";
 import { Hand } from "./components/Hand";
 import { OpponentHand } from "./components/OpponentHand";
 import { SwapPicker } from "./components/SwapPicker";
@@ -44,21 +45,32 @@ function asBoolean(value: unknown) {
   return typeof value === "boolean" ? value : false;
 }
 
-function asColor(value: unknown, fallback: UnoColor = "red"): UnoColor {
-  return value === "red" || value === "green" || value === "blue" || value === "yellow" || value === "wild" ? value : fallback;
+// Fix 6: fallback to "wild" (not "red") so unknown colors render as wild (dark purple) not red
+function asColor(value: unknown, fallback: UnoColor = "wild"): UnoColor {
+  const valid: UnoColor[] = ["red", "green", "blue", "yellow", "wild", "pink", "teal", "purple", "orange"];
+  return valid.includes(value as UnoColor) ? (value as UnoColor) : fallback;
 }
 
-function asCard(value: unknown): UnoCard | null {
+function asCard(value: unknown, side?: "light" | "dark"): UnoCard | null {
   if (!isRecord(value)) {
     return null;
   }
   const id = asString(value.id);
-  const color = asColor(value.color, "wild");
-  const cardValue = asString(value.value);
+  
+  let face = value;
+  if (side && isRecord(value[side])) {
+    face = value[side] as Record<string, unknown>;
+  } else if (isRecord(value.light)) {
+    // Fallback if it's a flip card but side is unknown
+    face = value.light as Record<string, unknown>;
+  }
+
+  const color = asColor(face.color, "wild");
+  const cardValue = asString(face.value);
   if (!id || !cardValue) {
     return null;
   }
-  const chosenColor = asColor(value.chosen_color, color);
+  const chosenColor = asColor(face.chosen_color ?? value.chosen_color, color);
   return { id, color, value: cardValue, chosen_color: chosenColor === "wild" ? undefined : chosenColor };
 }
 
@@ -73,12 +85,12 @@ function asPlayer(value: unknown): PlayerInfo | null {
   return { id, name: asString(value.name, id), is_host: asBoolean(value.is_host) };
 }
 
-function normalizeAction(value: unknown, playersById: Map<string, PlayerInfo>): LastAction | null {
+function normalizeAction(value: unknown, playersById: Map<string, PlayerInfo>, side?: "light" | "dark"): LastAction | null {
   if (!isRecord(value)) {
     return null;
   }
   const playerId = asString(value.player_id);
-  const card = asCard(value.card);
+  const card = asCard(value.card, side);
   const chosen = asColor(value.chosen_color ?? card?.chosen_color, "wild");
   return {
     type: asString(value.type, "ACTION"),
@@ -88,6 +100,10 @@ function normalizeAction(value: unknown, playersById: Map<string, PlayerInfo>): 
     draw_count: asNumber(value.draw_count ?? value.count, 0),
     count: asNumber(value.count, 0),
     chosen_color: chosen === "wild" ? undefined : chosen,
+    // Flip / No Mercy extended fields
+    flip_to: (value.flip_to === "dark" || value.flip_to === "light") ? value.flip_to : undefined,
+    eliminated: typeof value.eliminated === "string" ? value.eliminated : undefined,
+    drawn_count: asNumber(value.drawn_count, 0),
   };
 }
 
@@ -105,9 +121,10 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
     : players;
   const playersById = new Map(orderedPlayers.map((player) => [player.id, player]));
 
+  const side = rawState.side === "dark" ? "dark" : (rawState.side === "light" ? "light" : undefined);
   const hands = isRecord(rawState.hands) ? rawState.hands : {};
   const rawMyHand = Array.isArray(rawState.my_hand) ? rawState.my_hand : Array.isArray(hands[myPlayerId]) ? hands[myPlayerId] : [];
-  const myHand = rawMyHand.map(asCard).filter((card): card is UnoCard => Boolean(card));
+  const myHand = rawMyHand.map(c => asCard(c, side)).filter((card): card is UnoCard => Boolean(card));
   const opponentCounts: Record<string, number> = {};
 
   if (isRecord(rawState.opponent_card_counts)) {
@@ -117,18 +134,32 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
   } else {
     Object.entries(hands).forEach(([id, value]) => {
       if (id !== myPlayerId) {
-        opponentCounts[id] = isRecord(value) ? asNumber(value.card_count, 0) : 0;
+        if (typeof value === "number") {
+          opponentCounts[id] = value;
+        } else if (isRecord(value)) {
+          opponentCounts[id] = asNumber(value.card_count, 0);
+        } else {
+          opponentCounts[id] = 0;
+        }
       }
     });
   }
 
-  const discard = Array.isArray(rawState.discard) ? rawState.discard : [];
-  const discardTop = asCard(rawState.discard_top ?? discard[discard.length - 1]);
+  const discardTop = asCard(rawState.discard_top, side) ??
+    (Array.isArray(rawState.discard) && rawState.discard.length > 0 ? asCard(rawState.discard[rawState.discard.length - 1], side) : null);
   const activeColor = asColor(rawState.active_color ?? discardTop?.chosen_color ?? discardTop?.color, "red");
   const currentPlayerId = turnOrder[asNumber(rawState.current_player_index, 0)] ?? "";
   const currentPlayerName = asString(rawState.current_player_name, playersById.get(currentPlayerId)?.name ?? currentPlayerId);
   const winnerId = asString(rawState.winner_id ?? rawState.winner, "") || null;
   const pendingUnoCheck = asString(rawState.pending_uno_check, "") || null;
+
+  // Helper to normalize pending roulette / WDC objects
+  function normalizeRoulette(raw: unknown) {
+    if (isRecord(raw) && typeof raw.target_id === "string") {
+      return { target_id: raw.target_id, chosen_color: asString(raw.chosen_color) };
+    }
+    return null;
+  }
 
   return {
     my_hand: myHand,
@@ -151,7 +182,7 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
     uno_declared: isRecord(rawState.uno_declared)
       ? Object.fromEntries(Object.entries(rawState.uno_declared).map(([id, value]) => [id, asBoolean(value)]))
       : {},
-    last_action: normalizeAction(rawState.last_action, playersById),
+    last_action: normalizeAction(rawState.last_action, playersById, side),
     turn_order: turnOrder,
     players: orderedPlayers,
     pending_draw: asNumber(rawState.pending_draw, 0),
@@ -168,8 +199,28 @@ function normalizeState(rawState: unknown, myPlayerId: string): UnoGameState | n
     swap_targets: Array.isArray(rawState.swap_targets)
       ? rawState.swap_targets.map((id) => asString(id)).filter(Boolean)
       : [],
-    // Fix 3: pass through server deal timestamp so Board can compute serverDealDone
     initial_deal_ends_at: asNumber(rawState.initial_deal_ends_at, 0),
+    // Flip-specific
+    side: side,
+    active_colors: Array.isArray(rawState.active_colors)
+      ? rawState.active_colors.map((s) => asString(s)).filter(Boolean)
+      : ["red", "green", "blue", "yellow"],
+    pending_wild_draw_color: normalizeRoulette(rawState.pending_wild_draw_color),
+    pending_wd2_challenge: (() => {
+      const ch = rawState.pending_wd2_challenge;
+      if (isRecord(ch) && typeof ch.played_by === "string" && typeof ch.eligible_challenger === "string") {
+        return { played_by: ch.played_by, eligible_challenger: ch.eligible_challenger };
+      }
+      return null;
+    })(),
+    // No Mercy-specific
+    eliminated: Array.isArray(rawState.eliminated)
+      ? rawState.eliminated.map((s) => asString(s)).filter(Boolean)
+      : [],
+    pending_draw_value: asNumber(rawState.pending_draw_value, 0),
+    pending_color_roulette: normalizeRoulette(rawState.pending_color_roulette),
+    // Shared
+    roulette_drawn_count: asNumber(rawState.roulette_drawn_count, 0),
   };
 }
 
@@ -177,6 +228,8 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   const state = useMemo(() => normalizeState(gameState, myPlayerId), [gameState, myPlayerId]);
   const actions = useUnoActions(onAction);
   const [pendingWildCard, setPendingWildCard] = useState<UnoCard | null>(null);
+  // Fix 9: No Mercy Discard All — open color picker before dispatching action
+  const [pendingDiscardAllCard, setPendingDiscardAllCard] = useState<UnoCard | null>(null);
   const [normalRenderReady, setNormalRenderReady] = useState(false);
   const [turnFlashKey, setTurnFlashKey] = useState(0);
   const [turnFlashVisible, setTurnFlashVisible] = useState(false);
@@ -185,21 +238,13 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   const players = state?.players ?? [];
   const dealing = useDealing(players, myPlayerId);
 
-  useEffect(() => {
-    if (state?.status === "playing") {
-      const serverDealDone = !state.initial_deal_ends_at || Date.now() / 1000 >= state.initial_deal_ends_at;
-      if (serverDealDone) {
-        setNormalRenderReady(true);
-      } else {
-        dealing.startDealing(() => setNormalRenderReady(true));
-      }
-    }
-  }, [dealing.startDealing, state?.status, state?.initial_deal_ends_at]);
+  // Moved below the last_action effect to prevent dealing race conditions
 
-  // Fix 11: dismiss color picker when it's no longer our turn OR when a relevant action resolves it
+  // Dismiss color pickers when it's no longer our turn
   useEffect(() => {
     if (!state?.is_my_turn) {
       setPendingWildCard(null);
+      setPendingDiscardAllCard(null);
     }
   }, [state?.is_my_turn]);
 
@@ -216,14 +261,24 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
       type === "RESTART_GAME"
     ) {
       setPendingWildCard(null);
+      setPendingDiscardAllCard(null);
     }
-    // Fix 4: on restart, reset the dealing hook state and Board's guard so the
-    // deal animation replays for the new game
     if (type === "RESTART_GAME") {
       setNormalRenderReady(false);
       dealing.reset();
     }
   }, [state?.last_action, dealing.reset]);
+
+  useEffect(() => {
+    if (state?.status === "playing") {
+      const serverDealDone = !state.initial_deal_ends_at || Date.now() / 1000 >= state.initial_deal_ends_at;
+      if (serverDealDone) {
+        setNormalRenderReady(true);
+      } else {
+        dealing.startDealing(() => setNormalRenderReady(true));
+      }
+    }
+  }, [dealing.startDealing, state?.status, state?.initial_deal_ends_at]);
 
   useEffect(() => {
     if (state?.is_my_turn) {
@@ -271,15 +326,25 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
       setPendingWildCard(card);
       return;
     }
-    // Fix 13: only non-wild cards reach here, no chosen_color needed
+    // Fix 9: Discard All card needs color picker before action dispatch
+    if (card.value === "discard_all") {
+      setPendingDiscardAllCard(card);
+      return;
+    }
     actions.playCard(card.id);
   }, [actions]);
 
   const pickColorAndPlay = (color: PlayableColor) => {
     if (pendingWildCard) {
-      // Fix 13: chosen_color is guaranteed a valid string before dispatching
       actions.playCard(pendingWildCard.id, color);
       setPendingWildCard(null);
+    }
+  };
+
+  const pickDiscardColor = (color: PlayableColor) => {
+    if (pendingDiscardAllCard) {
+      actions.discardAll(color);
+      setPendingDiscardAllCard(null);
     }
   };
 
@@ -296,13 +361,14 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
   const serverDealDone = !state.initial_deal_ends_at || Date.now() / 1000 >= state.initial_deal_ends_at;
   const showHand = normalRenderReady || dealing.isDone || serverDealDone;
   const isDealLocked = state.status === "playing" && !dealing.isDone && !serverDealDone;
-  // Bug 10 fix: card interactivity must be blocked during WD4 challenge and when THIS player is awaiting a swap
-  // (not when a *different* player is awaiting a swap — that would black out innocent players' cards)
+  const isDarkSide = state.side === "dark";
   const canAct =
     state.is_my_turn &&
     !isDealLocked &&
     !state.pending_wd4_challenge &&
-    state.awaiting_swap !== myPlayerId;
+    state.awaiting_swap !== myPlayerId &&
+    !state.pending_color_roulette &&          // No Mercy WCR targeting me
+    !state.pending_wild_draw_color;           // Flip WDC targeting me
   const turnLabel = state.is_my_turn ? "Your turn" : `${state.current_player_name}'s turn`;
 
   return (
@@ -313,11 +379,14 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
         display: "grid",
         gridTemplateRows: "64px minmax(360px, 1fr) 42px 220px",
         gridTemplateAreas: "\"topbar\" \"table\" \"actionlog\" \"myhand\"",
-        background: `
-          radial-gradient(ellipse at 30% 20%, rgba(46,204,113,0.15) 0%, transparent 50%),
-          radial-gradient(ellipse at 70% 80%, rgba(26,140,255,0.10) 0%, transparent 50%),
-          radial-gradient(ellipse at 50% 40%, ${UI_COLORS.tableStart} 0%, ${UI_COLORS.tableMiddle} 50%, ${UI_COLORS.tableEnd} 100%)
-        `,
+        background: isDarkSide
+          ? `radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0d0618 55%, #050010 100%)`
+          : `
+            radial-gradient(ellipse at 30% 20%, rgba(46,204,113,0.15) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 80%, rgba(26,140,255,0.10) 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 40%, ${UI_COLORS.tableStart} 0%, ${UI_COLORS.tableMiddle} 50%, ${UI_COLORS.tableEnd} 100%)
+          `,
+        transition: "background 1.2s ease",
         position: "relative",
         overflow: "hidden",
       }}
@@ -504,7 +573,12 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           }
         </div>
         {opponents.map((opponent, index) => (
-          <OpponentHand key={opponent.id} opponent={opponent} position={opponentPositions[index] as "top" | "left" | "right"} />
+          <OpponentHand
+            key={opponent.id}
+            opponent={opponent}
+            position={opponentPositions[index] as "top" | "left" | "right"}
+            isEliminated={state.eliminated?.includes(opponent.id)}
+          />
         ))}
         <div style={{ position: "absolute", left: "calc(50% - 162px)", top: "50%", transform: "translateY(-50%)" }}>
           <DrawPile deckCount={state.deck_count} isMyTurn={canAct} onDraw={actions.drawCard} />
@@ -513,7 +587,7 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           <DiscardPile topCard={state.discard_top} />
         </div>
         <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", marginTop: 110 }}>
-          <TurnTimer turnStartedAt={state.turn_started_at} turnDuration={state.turn_duration} isMyTurn={state.is_my_turn} paused={isDealLocked} />
+          <TurnTimer turnStartedAt={state.turn_started_at} turnDuration={state.turn_duration} isMyTurn={state.is_my_turn} paused={isDealLocked} onTimeout={actions.timeout} />
         </div>
         <UnoButton
           isMyTurn={canAct}
@@ -522,7 +596,7 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           unoDeclared={state.uno_declared}
           pendingUnoCheck={state.pending_uno_check}
           pendingUnoCheckName={state.pending_uno_check_name}
-          onUno={() => actions.declareUno(myPlayerId)}
+          onUno={(targetId) => actions.declareUno(targetId)}
         />
         <AnimatePresence>
           {canAct && turnFlashVisible && (
@@ -538,7 +612,19 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
             </motion.div>
           )}
         </AnimatePresence>
-        <ColorPicker open={Boolean(pendingWildCard)} onColorPick={pickColorAndPlay} />
+        <ColorPicker
+          open={Boolean(pendingWildCard)}
+          onColorPick={pickColorAndPlay}
+          side={state.side}
+          colorOptions={state.side === "dark" ? (state.active_colors as PlayableColor[]) : undefined}
+        />
+        {/* Fix 9: Discard All color picker (No Mercy) */}
+        <ColorPicker
+          open={Boolean(pendingDiscardAllCard)}
+          onColorPick={pickDiscardColor}
+          title="Discard Which Color?"
+          colorOptions={(state.active_colors ?? ["red", "green", "blue", "yellow"]) as PlayableColor[]}
+        />
         <Wd4ChallengePrompt
           open={
             Boolean(state.pending_wd4_challenge) &&
@@ -563,8 +649,10 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
           onSwap={(targetId) => actions.swapHand(targetId)}
         />
         <GameOver open={state.status === "finished"} iWon={iWon} winnerName={state.winner_name} isHost={isHost} onPlayAgain={actions.restartGame} onLeave={onLeave} />
-        {/* Action card effect overlay — shows skip/reverse/draw animations */}
+        {/* Action card effect overlay — shows skip/reverse/draw/flip/eliminated animations */}
         <ActionEffect lastAction={!isDealLocked ? state.last_action : null} />
+        {/* Flip dark-side overlay + side badge + color roulette prompt */}
+        <GameVariantOverlays state={state} myPlayerId={myPlayerId} />
         <AnimatePresence>
           {(dealing.phase === "dealing" || dealing.phase === "revealing") && (
             <DealingOverlay phase={dealing.phase} dealtCounts={dealing.dealtCounts} players={players} myPlayerId={myPlayerId} />
@@ -597,6 +685,7 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
             onCardClick={playCard}
             isDealing={isDealLocked}
             dealRevealCount={isDealLocked ? dealing.revealCount : state.my_hand.length}
+            isDarkSide={isDarkSide}
           />
         )}
       </div>

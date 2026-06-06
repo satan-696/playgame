@@ -11,9 +11,10 @@ interface HandProps {
   onCardClick: (card: UnoCard) => void;
   isDealing?: boolean;
   dealRevealCount?: number;
+  isDarkSide?: boolean;
 }
 
-export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = false, dealRevealCount = cards.length }: HandProps) {
+export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = false, dealRevealCount = cards.length, isDarkSide = false }: HandProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const prevCardIdsRef = useRef<Set<string>>(new Set());
@@ -144,6 +145,7 @@ export function Hand({ cards, playableIds, isMyTurn, onCardClick, isDealing = fa
               isPlayable={canPlay}
               isMyTurn={isMyTurn}
               isHovered={isHovered}
+              isDarkSide={isDarkSide}
               onClick={() => onCardClick(card)}
             />
           </div>

@@ -5,23 +5,26 @@ import { CardBack } from "./CardBack";
 interface OpponentHandProps {
   opponent: OpponentInfo;
   position: "top" | "left" | "right";
+  isEliminated?: boolean;
 }
 
 const POSITION_STYLES: Record<OpponentHandProps["position"], React.CSSProperties> = {
-  top:   { top: "5%",  left: "50%", transform: "translateX(-50%)" },
+  top: { top: "5%", left: "50%", transform: "translateX(-50%)" },
   right: { right: "2%", top: "50%", transform: "translateY(-50%)" },
-  left:  { left: "2%",  top: "50%", transform: "translateY(-50%)" },
+  left: { left: "2%", top: "50%", transform: "translateY(-50%)" },
 };
 
-export function OpponentHand({ opponent, position }: OpponentHandProps) {
-  const visibleCount = Math.min(opponent.cardCount, 12);
+export function OpponentHand({ opponent, position, isEliminated = false }: OpponentHandProps) {
+  const visibleCount = Math.min(opponent.cardCount, 30);
   const overflow = opponent.cardCount - visibleCount;
   const isSide = position === "left" || position === "right";
 
-  // For side hands, cards are stacked tightly vertically; for top, fan spread
-  const maxSpread = isSide ? 0 : Math.min(visibleCount * 0.9, 10);
+
+  const gapPx = visibleCount <= 8 ? 40 : visibleCount <= 15 ? 26 : 16;
+
+  const maxSpread = Math.min(visibleCount * 2.2, 24);
   const angleStep = visibleCount > 1 ? maxSpread / (visibleCount - 1) : 0;
-  const gapPx = isSide ? 20 : 26;
+  const arcHeight = visibleCount > 1 ? 6 : 0;
 
   return (
     <div
@@ -35,17 +38,20 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
       <div
         style={{
           position: "relative",
-          width: isSide ? 80 : Math.max(220, visibleCount * gapPx + 30),
-          height: isSide ? Math.max(180, visibleCount * gapPx + 30) : 100,
+          width: Math.max(220, visibleCount * gapPx + 30),
+          height: 100,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          transform: position === "top" ? "rotate(180deg)" : (position === "left" ? "rotate(90deg)" : (position === "right" ? "rotate(-90deg)" : "none")),
         }}
       >
         {Array.from({ length: visibleCount }).map((_, index) => {
-          const angle = -maxSpread / 2 + index * angleStep + (position === "top" ? 180 : 0);
-          const x = isSide ? 0 : (index - (visibleCount - 1) / 2) * gapPx;
-          const y = isSide ? (index - (visibleCount - 1) / 2) * gapPx : 0;
+          const angle = -maxSpread / 2 + index * angleStep;
+          const x = (index - (visibleCount - 1) / 2) * gapPx;
+          // Sag towards the center of the arc
+          const normalizedPos = visibleCount > 1 ? (index - (visibleCount - 1) / 2) / ((visibleCount - 1) / 2) : 0;
+          const y = arcHeight * normalizedPos * normalizedPos;
 
           return (
             <div
@@ -89,6 +95,23 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
             +{overflow}
           </div>
         )}
+        {/* Elimination skull overlay (No Mercy) */}
+        {isEliminated && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(0,0,0,0.6)",
+              borderRadius: 12,
+              zIndex: 100,
+            }}
+          >
+            <span style={{ fontSize: 32 }}>💀</span>
+          </div>
+        )}
       </div>
 
       {/* Name + card count tag */}
@@ -100,6 +123,8 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
           alignItems: "center",
           gap: 2,
           transform: position === "top" ? "rotate(180deg)" : undefined,
+          opacity: isEliminated ? 0.4 : 1,
+          transition: "opacity 0.4s",
         }}
       >
         {/* Active player pulse ring */}
@@ -120,25 +145,7 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
               : "none",
           }}
         >
-          {/* Card count dot */}
-          <span
-            style={{
-              background: opponent.isActive ? UI_COLORS.cyan : "rgba(255,255,255,0.25)",
-              color: opponent.isActive ? "#000" : "white",
-              borderRadius: 999,
-              width: 18,
-              height: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 10,
-              fontWeight: 900,
-              flexShrink: 0,
-              transition: "background 0.3s",
-            }}
-          >
-            {opponent.cardCount}
-          </span>
+          {/* Card visual fan */}
           <span
             style={{
               color: opponent.isActive ? "white" : "rgba(255,255,255,0.75)",
@@ -151,6 +158,7 @@ export function OpponentHand({ opponent, position }: OpponentHandProps) {
               letterSpacing: 0.3,
               transition: "color 0.3s",
               animation: opponent.isActive ? "active-name-glow 1.4s infinite" : "none",
+              textDecoration: isEliminated ? "line-through" : "none",
             }}
           >
             {opponent.name}

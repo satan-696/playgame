@@ -103,6 +103,38 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ startGame, onSelectGame, s
             <UnoRuleToggles rules={rules} onToggle={toggleRule} isHost={isHost} />
           )}
 
+          {selectedGameId === "uno_flip" && (
+            <div style={{
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(123,47,255,0.12)",
+              border: "1px solid rgba(123,47,255,0.25)",
+              fontSize: 12,
+              color: "rgba(255,255,255,0.7)",
+              lineHeight: 1.6,
+            }}>
+              <div style={{ fontWeight: 800, color: "#c084fc", marginBottom: 4 }}>🌑 Flip Rules</div>
+              Play a <b>Flip</b> card to switch sides. Dark side has brutal <b>Draw 5</b>,
+              <b> Skip Everyone</b>, and <b>Wild Draw Color</b> cards. No house rules — the flip mechanic is wild enough.
+            </div>
+          )}
+
+          {selectedGameId === "uno_no_mercy" && (
+            <div style={{
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(239,68,68,0.10)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              fontSize: 12,
+              color: "rgba(255,255,255,0.7)",
+              lineHeight: 1.6,
+            }}>
+              <div style={{ fontWeight: 800, color: "#f87171", marginBottom: 4 }}>💀 No Mercy Rules</div>
+              Draw until you pull a playable card. Stack draw cards — <b>+2 ≤ +4 ≤ +6 ≤ +10</b>.
+              Reach 25 cards and you're <b>eliminated</b>. First to 1000 points wins overall.
+            </div>
+          )}
+
           <button
             onClick={() => startGame(selectedGameId, { rules })}
             disabled={!canStart}

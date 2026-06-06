@@ -3,11 +3,17 @@ export const CARD_HEIGHT = 156;
 
 // Card face colors — brighter, more saturated cartoon palette
 export const CARD_COLORS: Record<string, string> = {
+  // Light side
   red:    "#FF3B30",
   green:  "#2ECC71",
   blue:   "#1A8CFF",
   yellow: "#FFD600",
   wild:   "#7B2FFF",
+  // Dark side
+  pink:   "#FF2D78",
+  teal:   "#00C9B1",
+  purple: "#7B2FFF",
+  orange: "#FF6B00",
 };
 
 // Glow colors per card color — strong, vivid for playable highlights
@@ -17,14 +23,34 @@ export const CARD_COLOR_GLOW: Record<string, string> = {
   blue:   "rgba(26,140,255,0.75)",
   yellow: "rgba(255,214,0,0.75)",
   wild:   "rgba(123,47,255,0.75)",
+  // Dark side
+  pink:   "rgba(255,45,120,0.75)",
+  teal:   "rgba(0,201,177,0.75)",
+  purple: "rgba(123,47,255,0.75)",
+  orange: "rgba(255,107,0,0.75)",
 };
 
+// Symbols shown on card face — safe ASCII/Unicode fallbacks only
 export const VALUE_SYMBOLS: Record<string, string> = {
-  skip: "⊘",
-  reverse: "↺",
-  draw2: "+2",
-  wild: "★",
-  wild_draw4: "+4",
+  // Standard UNO
+  skip:              "⊘",
+  reverse:           "↺",
+  draw2:             "+2",
+  wild:              "★",
+  wild_draw4:        "+4",
+  // UNO Flip — light side
+  draw1:             "+1",
+  flip:              "↕",    // Safe, no emoji
+  // UNO Flip — dark side
+  skip_everyone:     "⊗",
+  draw5:             "+5",
+  wild_draw2:        "+2W",  // No star character
+  wild_draw_color:   "WDC",
+  // UNO No Mercy
+  wild_draw6:        "+6",
+  wild_draw10:       "+10",
+  discard_all:       "DA",
+  wild_color_roulette: "WCR",
 };
 
 export const UI_COLORS = {
@@ -77,3 +103,4 @@ export const UI_COLORS = {
 } as const;
 
 export const UNO_COLORS = ["red", "green", "blue", "yellow"] as const;
+export const DARK_COLORS = ["pink", "teal", "purple", "orange"] as const;

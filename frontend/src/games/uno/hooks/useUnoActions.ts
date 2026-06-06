@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { GameActionSender } from "../types";
+import type { GameActionSender, PlayableColor } from "../types";
 
 export function useUnoActions(onAction: GameActionSender) {
   const sendGameAction = useCallback(
@@ -19,6 +19,9 @@ export function useUnoActions(onAction: GameActionSender) {
     drawCard: () => {
       sendGameAction({ type: "DRAW_CARD" });
     },
+    timeout: () => {
+      sendGameAction({ type: "TIMEOUT" });
+    },
     declareUno: (targetId: string) => {
       sendGameAction({ type: "DECLARE_UNO", target_player_id: targetId });
     },
@@ -34,6 +37,15 @@ export function useUnoActions(onAction: GameActionSender) {
     swapHand: (targetPlayerId: string) => {
       sendGameAction({ type: "SWAP_HAND", target_player_id: targetPlayerId });
     },
+    // UNO No Mercy: discard all cards of a chosen color
+    discardAll: (chosenColor: PlayableColor) => {
+      sendGameAction({ type: "DISCARD_ALL", chosen_color: chosenColor });
+    },
+    // UNO Flip: challenge the Wild Draw 2
+    challengeWd2: (accept: boolean) => {
+      sendGameAction({ type: "CHALLENGE_WD2", accept });
+    },
   };
 }
+
 

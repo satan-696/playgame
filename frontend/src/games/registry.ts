@@ -11,6 +11,24 @@ export const GAME_REGISTRY: Record<string, GameMeta> = {
     description: "Classic card game. First to empty your hand wins.",
     component: Board,
   },
+  uno_flip: {
+    id: "uno_flip",
+    name: "UNO Flip",
+    minPlayers: 2,
+    maxPlayers: 6,
+    thumbnail: null,
+    description: "UNO with a Dark Side — flip the deck to reveal brutal new cards.",
+    component: Board,
+  },
+  uno_no_mercy: {
+    id: "uno_no_mercy",
+    name: "UNO No Mercy",
+    minPlayers: 2,
+    maxPlayers: 6,
+    thumbnail: null,
+    description: "168 cards. Stack +10s. Get eliminated at 25 cards. No mercy.",
+    component: Board,
+  },
 };
 
 export const GAME_METAS = GAME_REGISTRY;

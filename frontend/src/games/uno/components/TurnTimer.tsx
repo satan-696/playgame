@@ -6,9 +6,10 @@ interface TurnTimerProps {
   turnDuration: number;
   isMyTurn: boolean;
   paused?: boolean;
+  onTimeout?: () => void;
 }
 
-export function TurnTimer({ turnStartedAt, turnDuration, isMyTurn, paused = false }: TurnTimerProps) {
+export function TurnTimer({ turnStartedAt, turnDuration, isMyTurn, paused = false, onTimeout }: TurnTimerProps) {
   const [remaining, setRemaining] = useState(turnDuration);
   const r = 20;
   const circumference = 2 * Math.PI * r;
@@ -23,10 +24,18 @@ export function TurnTimer({ turnStartedAt, turnDuration, isMyTurn, paused = fals
     }
     const interval = window.setInterval(() => {
       const elapsed = Date.now() / 1000 - turnStartedAt;
-      setRemaining(Math.min(turnDuration, Math.max(0, turnDuration - elapsed)));
+      const timeLeft = Math.max(0, turnDuration - elapsed);
+      setRemaining(Math.min(turnDuration, timeLeft));
+      
+      // Fire timeout action if time runs out and it's our turn
+      if (timeLeft === 0 && isMyTurn && onTimeout) {
+        onTimeout();
+      }
     }, 250);
     return () => window.clearInterval(interval);
-  }, [paused, turnDuration, turnStartedAt]);
+  }, [paused, turnDuration, turnStartedAt, isMyTurn, onTimeout]);
+
+  if (paused) return null;
 
   return (
     <div

@@ -7,7 +7,7 @@ interface UnoButtonProps {
   unoDeclared: Record<string, boolean>;
   pendingUnoCheck: string | null;
   pendingUnoCheckName: string | null;
-  onUno: () => void;
+  onUno: (targetId: string) => void;
 }
 
 export function UnoButton({
@@ -19,11 +19,12 @@ export function UnoButton({
   pendingUnoCheckName: _pendingUnoCheckName,
   onUno,
 }: UnoButtonProps) {
-  const unoButtonActive = pendingUnoCheck === myPlayerId && !unoDeclared?.[myPlayerId];
+  const unoButtonActive =
+    pendingUnoCheck && !unoDeclared?.[pendingUnoCheck];
 
   const handleUnoClick = () => {
     if (unoButtonActive) {
-      onUno();
+      onUno(pendingUnoCheck === myPlayerId ? myPlayerId : pendingUnoCheck);
     }
   };
 

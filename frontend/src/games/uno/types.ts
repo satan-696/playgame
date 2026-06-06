@@ -1,4 +1,14 @@
-export type UnoColor = "red" | "green" | "blue" | "yellow" | "wild";
+export type UnoColor =
+  | "red"
+  | "green"
+  | "blue"
+  | "yellow"
+  | "wild"
+  | "pink"
+  | "teal"
+  | "purple"
+  | "orange";
+
 export type PlayableColor = Exclude<UnoColor, "wild">;
 
 export interface UnoRules {
@@ -25,6 +35,7 @@ export interface OpponentInfo {
   name: string;
   cardCount: number;
   isActive: boolean;
+  isEliminated?: boolean;
 }
 
 export interface UnoGameState {
@@ -56,6 +67,17 @@ export interface UnoGameState {
   awaiting_swap: string | null;
   swap_targets: string[];
   initial_deal_ends_at: number;
+  // Flip-specific
+  side?: "light" | "dark";
+  active_colors?: string[];
+  pending_wild_draw_color?: { target_id: string; chosen_color: string } | null;
+  pending_wd2_challenge?: { played_by: string; eligible_challenger: string } | null;
+  // No Mercy-specific
+  eliminated?: string[];
+  pending_draw_value?: number;
+  pending_color_roulette?: { target_id: string; chosen_color: string } | null;
+  // Shared (Flip + No Mercy)
+  roulette_drawn_count?: number;
 }
 
 export interface LastAction {
@@ -66,6 +88,9 @@ export interface LastAction {
   draw_count?: number;
   count?: number;
   chosen_color?: PlayableColor;
+  flip_to?: "light" | "dark";
+  eliminated?: string;
+  drawn_count?: number;
 }
 
 export interface PlayerInfo {

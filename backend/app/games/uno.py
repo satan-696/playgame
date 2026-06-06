@@ -227,8 +227,22 @@ class UnoEngine(GameEngine):
         # Bug Fix 14: RESTART_GAME preserves original order & cumulative scores
         if t == "RESTART_GAME":
             players = [{"id": pid, "name": name} for pid, name in state["player_names"].items()]
-            new_state = self.get_initial_state(players, rules=state.get("rules"))
-            new_state["scores"] = state.get("scores", {pid: 0 for pid in state["player_names"]})
+            rules = state.get("rules")
+            if rules:
+                new_state = self.get_initial_state(players, rules=rules)
+            else:
+                new_state = self.get_initial_state(players)
+                
+            if state.get("overall_winner"):
+                # Full match restart
+                new_state["scores"] = {pid: 0 for pid in state["player_names"]}
+                new_state["cumulative_scores"] = {pid: 0 for pid in state["player_names"]}
+            else:
+                # Next round
+                new_state["scores"] = state.get("scores", {})
+                new_state["cumulative_scores"] = state.get("cumulative_scores", {})
+                
+            new_state["last_action"] = {"type": "RESTART_GAME"}
             return new_state
 
         if t == "DECLARE_UNO":
