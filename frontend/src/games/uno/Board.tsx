@@ -432,7 +432,7 @@ export default function Board({ gameState, myPlayerId, onAction, onLeave, isHost
             </button>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 800 }}>
-            <span style={{ display: "inline-block", animation: `spin-cw ${state.turn_started_at && (state.turn_duration - (Date.now() / 1000 - state.turn_started_at)) < 8 ? "0.8s" : "3s"} linear infinite`, animationDirection: state.direction === 1 ? "normal" : "reverse", fontSize: 18 }}>↻</span>
+            <span style={{ display: "inline-block", animationName: "spin-cw", animationDuration: state.turn_started_at && (state.turn_duration - (Date.now() / 1000 - state.turn_started_at)) < 8 ? "0.8s" : "3s", animationTimingFunction: "linear", animationIterationCount: "infinite", animationDirection: state.direction === 1 ? "normal" : "reverse", fontSize: 18 }}>↻</span>
             {state.direction === 1 ? "Clockwise" : "Counter-Clockwise"}
           </div>
         </div>

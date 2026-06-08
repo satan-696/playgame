@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { GAME_METAS } from "../../games/registry";
 import { useRoomContext } from "../context/RoomContext";
 import { usePlayer } from "../context/PlayerContext";
+import { useWindowSize } from "../../hooks/useWindowSize";
 
 const LockIcon: React.FC = () => (
   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-base-content/50" aria-hidden="true">
@@ -35,6 +36,12 @@ export const GameLibrarySidebar: React.FC<GameLibrarySidebarProps> = ({
   const [collapsed, setCollapsed] = useState(false);
   const { room } = useRoomContext();
   const { playerId } = usePlayer();
+  const { breakpoint } = useWindowSize();
+  const isMobile = breakpoint === "mobile";
+
+  React.useEffect(() => {
+    if (isMobile) setCollapsed(true);
+  }, [isMobile]);
 
   const isHost = room?.host_id === playerId;
   const games = Object.values(GAME_METAS);
@@ -47,7 +54,10 @@ export const GameLibrarySidebar: React.FC<GameLibrarySidebarProps> = ({
       layout
       animate={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="relative flex flex-col border-l border-base-300 bg-base-200 overflow-hidden shrink-0"
+      className={clsx(
+        "flex flex-col border-l border-base-300 bg-base-200 overflow-hidden shrink-0",
+        isMobile ? "absolute right-0 top-0 bottom-0 z-50 shadow-2xl h-full" : "relative"
+      )}
       style={{ minWidth: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
     >
       <button

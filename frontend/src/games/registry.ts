@@ -1,5 +1,6 @@
 import type { GameMeta } from "../shell/types";
 import Board from "./uno/Board";
+import SnakeLadderBoard from "./snake-ladder/SnakeLadderBoard";
 
 export const GAME_REGISTRY: Record<string, GameMeta> = {
   uno: {
@@ -28,6 +29,15 @@ export const GAME_REGISTRY: Record<string, GameMeta> = {
     thumbnail: null,
     description: "168 cards. Stack +10s. Get eliminated at 25 cards. No mercy.",
     component: Board,
+  },
+  snake_ladder: {
+    id:          "snake_ladder",
+    name:        "Snake & Ladder",
+    minPlayers:  2,
+    maxPlayers:  6,
+    description: "Roll dice, climb ladders, dodge snakes. Classic fun!",
+    thumbnail:   null,
+    component:   SnakeLadderBoard,
   },
 };
 

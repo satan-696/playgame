@@ -1,0 +1,4 @@
+@keyframes roll-btn-pulse {
+  0%, 100% { box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 8px 24px rgba(255,107,0,0.4); }
+  50%       { box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 8px 40px rgba(255,107,0,0.7); }
+}

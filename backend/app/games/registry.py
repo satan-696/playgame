@@ -30,3 +30,9 @@ try:
 except Exception as _e:
     import logging
     logging.getLogger(__name__).error(f"Failed to load UnoNoMercyEngine: {_e}")
+
+try:
+    from app.games.snake_ladder import SnakeLadderEngine as _SnakeLadderEngine  # noqa
+except Exception as _e:
+    import logging
+    logging.getLogger(__name__).error(f"Failed to load SnakeLadderEngine: {_e}")
