@@ -1,40 +1,36 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import { SnakeLadderAction } from "../types";
 
 interface EventOverlayProps {
-  lastAction: SnakeLadderAction | null;
+  action: SnakeLadderAction | null;
   breakpoint: string;
 }
 
-export default function EventOverlay({ lastAction, breakpoint }: EventOverlayProps) {
-  const [currentEvent, setCurrentEvent] = useState<SnakeLadderAction | null>(null);
+export default function EventOverlay({ action, breakpoint }: EventOverlayProps) {
   const isMobile = breakpoint === "mobile";
-
-  useEffect(() => {
-    if (lastAction?.event) {
-      setCurrentEvent(lastAction);
-      const timer = setTimeout(() => setCurrentEvent(null), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [lastAction]);
 
   return (
     <AnimatePresence>
-      {currentEvent && (
-        <div style={{
-          position: "absolute",
-          top: 0, left: 0, right: 0, bottom: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-          zIndex: 50,
-          background: "rgba(0,0,0,0.4)",
-          borderRadius: 8,
-        }}>
-          {currentEvent.event === "snake" && (
+      {action?.event && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            zIndex: 50,
+            background: "rgba(0,0,0,0.45)",
+            borderRadius: 8,
+          }}
+        >
+          {action.event === "snake" && (
             <motion.div
+              key={`snake-${action.player_id}-${action.from}`}
               initial={{ opacity: 0, y: -30 }}
               animate={{ opacity: [0, 1, 1, 0], y: [-30, 0, 0, 30] }}
               exit={{ opacity: 0 }}
@@ -43,13 +39,14 @@ export default function EventOverlay({ lastAction, breakpoint }: EventOverlayPro
             >
               <div style={{ fontSize: isMobile ? 64 : 96 }}>🐍</div>
               <div style={{ color: "#FF3B30", fontSize: isMobile ? 22 : 30, fontWeight: 900 }}>
-                SNAKE! -{currentEvent.event_from! - currentEvent.to!} squares
+                SNAKE! -{action.event_from! - action.to!} squares
               </div>
             </motion.div>
           )}
 
-          {currentEvent.event === "ladder" && (
+          {action.event === "ladder" && (
             <motion.div
+              key={`ladder-${action.player_id}-${action.from}`}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1, 0.8] }}
               exit={{ opacity: 0 }}
@@ -58,13 +55,14 @@ export default function EventOverlay({ lastAction, breakpoint }: EventOverlayPro
             >
               <div style={{ fontSize: isMobile ? 64 : 96 }}>🪜</div>
               <div style={{ color: "#FFD600", fontSize: isMobile ? 22 : 30, fontWeight: 900 }}>
-                LADDER! +{currentEvent.to! - currentEvent.event_from!} squares
+                LADDER! +{action.to! - action.event_from!} squares
               </div>
             </motion.div>
           )}
 
-          {currentEvent.event === "bounce" && (
+          {action.event === "bounce" && (
             <motion.div
+              key={`bounce-${action.player_id}-${action.from}`}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: [0, 1, 1, 0], scale: [0.8, 1.1, 1, 0.9] }}
               exit={{ opacity: 0 }}

@@ -35,8 +35,8 @@ _START = 0       # players begin off-board at position 0
 _WIN  = 100      # first to reach exactly 100 wins
 
 
-def _roll_dice() -> tuple[int, int]:
-    return random.randint(1, 6), random.randint(1, 6)
+def _roll_dice() -> int:
+    return random.randint(1, 6)
 
 
 @register_game("snake_ladder")
@@ -115,9 +115,9 @@ class SnakeLadderEngine(GameEngine):
             self._advance_turn(state, n)
             return state
 
-        d1, d2 = _roll_dice()
-        roll_sum = d1 + d2
-        is_doubles = d1 == d2
+        d1 = _roll_dice()
+        roll_sum = d1
+        is_doubles = False
 
         old_pos = state["positions"][player_id]
         new_pos = old_pos + roll_sum
@@ -142,12 +142,12 @@ class SnakeLadderEngine(GameEngine):
                 event = "snake"
 
         state["positions"][player_id] = new_pos
-        state["last_roll"] = [d1, d2]
+        state["last_roll"] = [d1]
 
         state["last_action"] = {
             "type":      "ROLL_DICE",
             "player_id": player_id,
-            "dice":      [d1, d2],
+            "dice":      [d1],
             "roll_sum":  roll_sum,
             "from":      old_pos,
             "to":        new_pos,

@@ -1,5 +1,17 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, useAnimation } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+
+// Pip offsets as [dy%, dx%] from center — positive y is down, positive x is right
+const PIP_LAYOUTS: Record<number, [number, number][]> = {
+  1: [[0, 0]],
+  2: [[-30, -30], [30, 30]],
+  3: [[-30, -30], [0, 0], [30, 30]],
+  4: [[-30, -30], [30, -30], [-30, 30], [30, 30]],
+  5: [[-30, -30], [30, -30], [0, 0], [-30, 30], [30, 30]],
+  6: [[-30, -30], [30, -30], [-30, 0], [30, 0], [-30, 30], [30, 30]],
+};
+
+const CYCLE_FACES = [1, 4, 2, 6, 3, 5];
 
 interface DiceDisplayProps {
   dice: [number, number] | null;
@@ -7,100 +19,111 @@ interface DiceDisplayProps {
   breakpoint: string;
 }
 
-function Die({ value, size, isRolling }: { value: number; size: number; isRolling: boolean }) {
-  const pips = [];
-  // Standard dice layout
-  if ([1, 3, 5].includes(value)) pips.push({ top: "50%", left: "50%" }); // center
-  if ([2, 3, 4, 5, 6].includes(value)) {
-    pips.push({ top: "25%", left: "25%" }); // top-left
-    pips.push({ top: "75%", left: "75%" }); // bottom-right
-  }
-  if ([4, 5, 6].includes(value)) {
-    pips.push({ top: "25%", left: "75%" }); // top-right
-    pips.push({ top: "75%", left: "25%" }); // bottom-left
-  }
-  if (value === 6) {
-    pips.push({ top: "50%", left: "25%" }); // middle-left
-    pips.push({ top: "50%", left: "75%" }); // middle-right
-  }
-
-  return (
-    <motion.div
-      animate={isRolling ? { rotate: [0, 90, 180, 270, 360], scale: [1, 1.15, 0.9, 1.1, 1] } : { rotate: 0, scale: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      style={{
-        width: size,
-        height: size,
-        background: "white",
-        borderRadius: size * 0.18,
-        boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
-        position: "relative",
-      }}
-    >
-      {pips.map((pos, i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            width: size * 0.2,
-            height: size * 0.2,
-            background: "#333",
-            borderRadius: "50%",
-            top: pos.top,
-            left: pos.left,
-            transform: "translate(-50%, -50%)",
-          }}
-        />
-      ))}
-    </motion.div>
-  );
-}
-
 export default function DiceDisplay({ dice, isRolling, breakpoint }: DiceDisplayProps) {
-  const DIE_SIZE = breakpoint === "mobile" ? 40 : 56;
-  const isDoubles = dice && dice[0] === dice[1];
+  const dieSize  = breakpoint === "mobile" ? 52 : breakpoint === "tablet" ? 64 : 80;
+  const pipR     = dieSize * 0.07;
+  const shadowH  = dieSize * 0.10;
 
-  // We need to keep track of previous dice to show something even if current is null or during roll
-  const [displayDice, setDisplayDice] = useState<[number, number]>([1, 1]);
+  const [displayFace, setDisplayFace] = useState<number>(dice?.[0] ?? 1);
+  const controls  = useAnimation();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cycleIdxRef = useRef(0);
 
   useEffect(() => {
-    if (dice) {
-      setDisplayDice(dice);
+    if (isRolling) {
+      // Start flip loop
+      controls.start({
+        rotateY: [0, -180, -360, -540, -720],
+        transition: { duration: 0.65, ease: "linear" },
+      });
+      // Cycle pip face every 80ms
+      intervalRef.current = setInterval(() => {
+        cycleIdxRef.current = (cycleIdxRef.current + 1) % CYCLE_FACES.length;
+        setDisplayFace(CYCLE_FACES[cycleIdxRef.current]);
+      }, 80);
+    } else {
+      // Stop cycling
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      // Settle back to 0° then snap to actual value
+      controls.start({
+        rotateY: 0,
+        transition: { duration: 0.25, ease: "easeOut" },
+      });
+      const t = setTimeout(() => {
+        if (dice?.[0]) setDisplayFace(dice[0]);
+      }, 100);
+      return () => clearTimeout(t);
     }
-  }, [dice]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isRolling]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When dice value arrives after rolling stops, ensure face is set
+  useEffect(() => {
+    if (!isRolling && dice?.[0]) {
+      setDisplayFace(dice[0]);
+    }
+  }, [dice, isRolling]);
+
+  const pips  = PIP_LAYOUTS[displayFace] ?? [];
 
   return (
-    <div style={{ display: "flex", gap: 12, position: "relative" }}>
-      <Die value={displayDice[0]} size={DIE_SIZE} isRolling={isRolling} />
-      <Die value={displayDice[1]} size={DIE_SIZE} isRolling={isRolling} />
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      {/* Perspective wrapper — single-axis Y flip */}
+      <div style={{ perspective: 800, position: "relative" }}>
+        <motion.div
+          animate={controls}
+          style={{
+            width: dieSize,
+            height: dieSize,
+            borderRadius: dieSize * 0.18,
+            background: "linear-gradient(145deg, #ffffff, #e8e8e8)",
+            border: "2px solid #ddd",
+            boxShadow: `
+              0 ${shadowH}px 0 #bbb,
+              0 ${shadowH * 1.5}px ${dieSize * 0.25}px rgba(0,0,0,0.40)
+            `,
+            position: "relative",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          {/* Pips */}
+          {pips.map(([dy, dx], i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                top:  `calc(50% + ${dy}%)`,
+                left: `calc(50% + ${dx}%)`,
+                transform: "translate(-50%, -50%)",
+                width:  pipR * 2,
+                height: pipR * 2,
+                borderRadius: "50%",
+                background: "#2c2c2c",
+                boxShadow: "inset 0 1px 2px rgba(0,0,0,0.4)",
+              }}
+            />
+          ))}
+        </motion.div>
 
-      <AnimatePresence>
-        {isDoubles && !isRolling && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: -40 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "linear-gradient(to right, #FFD700, #FFA500)",
-              color: "#333",
-              padding: "4px 12px",
-              borderRadius: 16,
-              fontWeight: 900,
-              fontSize: breakpoint === "mobile" ? 12 : 14,
-              whiteSpace: "nowrap",
-              boxShadow: "0 4px 12px rgba(255,165,0,0.5)",
-              zIndex: 10,
-            }}
-          >
-            DOUBLES! 🎲🎲
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* 3D depth face — the "bottom" of the cube */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -shadowH,
+            left:  dieSize * 0.05,
+            right: dieSize * 0.05,
+            height: shadowH,
+            background: "#888",
+            borderRadius: `0 0 ${dieSize * 0.18}px ${dieSize * 0.18}px`,
+            zIndex: -1,
+          }}
+        />
+      </div>
     </div>
   );
 }
